@@ -21,10 +21,32 @@ int canExecute(int isClient, enum Commands cmd)
 	{
 		if(*(arr+i)==cmd)
 		{
-			return 1;
+			return EXIT_SUCCESS;
 		}
 		i++;
 	}
-	return 0; 
+	return EXIT_FAILURE;
 }
 
+int prepareRegex()
+{
+	regex_t re;
+  regmatch_t rm[3];
+  if (regcomp(&re, REGISTER_CMD_REGEX, REG_EXTENDED) != 0) {
+    fprintf(stderr, "Failed to compile regex '%s'\n", REGISTER_CMD_REGEX);
+    return EXIT_FAILURE;
+  }
+	return EXIT_SUCCESS;
+}
+
+int findCommand(char *userInput)
+{
+
+  if (regexec(&re, userInput, 3, rm, 0) == 0) {
+    printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+    printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+  } else {
+    printf("Invalid Command, See HELP");
+  }
+
+}
