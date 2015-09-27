@@ -3,8 +3,18 @@
 #include<string.h>
 #include<regex.h>
 #include<errno.h>
+#include "kbcommands.h"
 
 #define REGISTER_CMD_REGEX "^REGISTER (.+) ([0-9]+)$"
+#define CREATOR_CMD_REGEX "^CREATOR$"
+#define DISPLAY_CMD_REGEX "^DISPLAY$"
+#define CONNECT_CMD_REGEX "^CONNECT (.+) ([0-9]+)$"
+#define LIST_CMD_REGEX "^LIST$"
+#define TERMINATE_CMD_REGEX "^TERMINATE ([0-9]+)$"
+#define QUIT_CMD_REGEX "^QUIT$"
+#define GET_CMD_REGEX "^GET ([0-9]+) (.+)$"
+#define PUT_CMD_REGEX "^PUT ([0-9]+) (.+)$"
+#define SYNC_CMD_REGEX "^SYNC$"
 
 int main(int argc, char **argv) {
 
@@ -13,6 +23,7 @@ int main(int argc, char **argv) {
   int portNo;
   regex_t re;
   regmatch_t rm[3];
+  int isClient = 0;
 
   if(argc != 3) {
     printf("Usage:");
@@ -21,12 +32,17 @@ int main(int argc, char **argv) {
   } else {
     portNo = atoi(argv[2]);
     strcpy(programType, argv[1]);
-    if((strcmp(programType, "server")!=0) && (strcmp(programType,"client")!=0)) {
+    if((strcmp(programType, "s")!=0) && (strcmp(programType,"c")!=0)) {
       printf("Usage:");
-      printf("./dfs <type> <port>");     
+      printf("./dfs <type> <port>");
       return 0;
+    } else {
+      if(strcmp(programType,"c")==0) {
+        isClient = 1;
+      }
     }
   }
+
 
   if (regcomp(&re, REGISTER_CMD_REGEX, REG_EXTENDED) != 0) {
     fprintf(stderr, "Failed to compile regex '%s'\n", REGISTER_CMD_REGEX);
@@ -42,8 +58,10 @@ int main(int argc, char **argv) {
     printf("Invalid Command, See HELP");
   }
 
+	printf("Can I execute REGISTER(%d) on %s: %d", REGISTER, programType, canExecute(isClient,REGISTER));
+
   printf("\nStarting %s on port %d", programType, portNo);
-  
+
   return 0;
 
 }
