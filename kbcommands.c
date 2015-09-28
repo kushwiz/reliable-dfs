@@ -3,6 +3,8 @@
 enum Commands Server_Commands[] = {HELP,CREATOR,DISPLAY,LIST,QUIT};
 enum Commands Client_Commands[] = {HELP,CREATOR,DISPLAY,REGISTER,CONNECT,LIST,TERMINATE,QUIT,GET,PUT,SYNC};
 
+char commandPatterns[CMDCOUNT][50];
+
 int canExecute(int isClient, enum Commands cmd)
 {
   enum Commands *arr;
@@ -28,25 +30,17 @@ int canExecute(int isClient, enum Commands cmd)
 	return EXIT_FAILURE;
 }
 
-int prepareRegex()
+void prepareCommandPatterns()
 {
-	regex_t re;
-  regmatch_t rm[3];
-  if (regcomp(&re, REGISTER_CMD_REGEX, REG_EXTENDED) != 0) {
-    fprintf(stderr, "Failed to compile regex '%s'\n", REGISTER_CMD_REGEX);
-    return EXIT_FAILURE;
-  }
-	return EXIT_SUCCESS;
-}
-
-int findCommand(char *userInput)
-{
-
-  if (regexec(&re, userInput, 3, rm, 0) == 0) {
-    printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
-    printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
-  } else {
-    printf("Invalid Command, See HELP");
-  }
-
+	strcpy(commandPatterns[HELP], "^HELP$");
+	strcpy(commandPatterns[CREATOR], "^CREATOR$");
+	strcpy(commandPatterns[DISPLAY], "^DISPLAY$");
+  strcpy(commandPatterns[REGISTER], "^REGISTER (.+) ([0-9]+)$");
+	strcpy(commandPatterns[CONNECT], "^CONNECT (.+) ([0-9]+)$");
+	strcpy(commandPatterns[LIST], "^LIST$");
+  strcpy(commandPatterns[TERMINATE], "^TERMINATE ([0-9]+)$");
+	strcpy(commandPatterns[QUIT], "^QUIT$");
+	strcpy(commandPatterns[GET], "^GET ([0-9]+) (.+)$");
+	strcpy(commandPatterns[PUT], "^PUT ([0-9]+) (.+)$");
+	strcpy(commandPatterns[SYNC], "^SYNC$");
 }
