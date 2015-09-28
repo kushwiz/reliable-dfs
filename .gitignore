@@ -1,4 +1,6 @@
 *.swp
 *.out
 
+dfs.o
+kbcommands.o
 dfs
