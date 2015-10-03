@@ -3,7 +3,7 @@
 enum Commands Server_Commands[] = {HELP,CREATOR,DISPLAY,LIST,QUIT};
 enum Commands Client_Commands[] = {HELP,CREATOR,DISPLAY,REGISTER,CONNECT,LIST,TERMINATE,QUIT,GET,PUT,SYNC};
 
-char commandPatterns[CMDCOUNT][50];
+char commandPatterns[CMDCOUNT][500];
 
 int canExecute(int isClient, enum Commands cmd)
 {

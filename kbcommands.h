@@ -18,7 +18,7 @@ int whichCommands(char*);
 
 void prepareCommandPatterns();
 
-extern char commandPatterns[CMDCOUNT][50];
+extern char commandPatterns[CMDCOUNT][500];
 
 void executeCommand();
 
