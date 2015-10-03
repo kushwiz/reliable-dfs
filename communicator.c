@@ -1,19 +1,13 @@
 #include "communicator.h"
 
-static int listener;
-static fd_set master;
-static int fdmax;
+int listener;
+fd_set master;
+int fdmax;
+int senderfd;
 
-void sigchld_handler(int s)
-{
-    // waitpid() might overwrite errno, so we save and restore it:
-    int saved_errno = errno;
+struct connectionInfo *startPtr=NULL;
 
-    while(waitpid(-1, NULL, WNOHANG) > 0);
-
-    errno = saved_errno;
-}
-
+struct connectionInfo *endPtr=NULL;
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -25,11 +19,63 @@ void *get_in_addr(struct sockaddr *sa)
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-int setup_socket_()
+
+void insertClientToList(struct connectionInfo *newClient)
+{
+	if(startPtr==NULL)
+	{
+		startPtr = newClient;
+		endPtr = newClient;
+		endPtr->next=NULL;
+	}
+	else
+	{
+		endPtr->next = newClient;
+		endPtr = newClient;
+		endPtr->next = NULL;
+	}
+}
+
+
+void removeClientFromList(int sockfd)
+{
+	struct connectionInfo *itr;
+	itr = startPtr;
+	struct connectionInfo *itrPrev;
+	itrPrev = itr;
+
+	while(itr!=NULL)
+	{
+		if(itr->sockfd == sockfd)
+		{
+			if(startPtr == itr)
+			{
+				startPtr = itr->next;
+				itrPrev = startPtr;
+				free(itr);
+			}
+			else
+			{
+				itrPrev->next = itr->next;
+				free(itr);
+				itr = itrPrev->next;
+			}
+			return;
+		}
+		else
+		{	itrPrev = itr;
+			itr=itr->next;
+		}
+	}
+}
+
+int setup_server_socket(char *portNo)
 {
     struct addrinfo hints, *servinfo, *p;
     int yes=1;
     int rv;
+
+
 
 		FD_ZERO(&master);
 
@@ -38,7 +84,7 @@ int setup_socket_()
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE; // use my IP
 
-    if ((rv = getaddrinfo(NULL, SERVPORT, &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(NULL, portNo, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         return 1;
     }
@@ -93,18 +139,14 @@ void* socketRunner(void *arg)
   char s[INET6_ADDRSTRLEN];
 	fd_set read_fds;
 
-  printf("server: waiting for connections...\n");
-
   while(1) {  // main accept() loop
 		read_fds = master;
 		int i=0;
-
 		if(select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1)
 		{
 			perror("select");
 			exit(4);
 		}
-		printf("ready for loop\n");
 		for(i=0;i<=fdmax;i++){
 			if(FD_ISSET(i, &read_fds)) {
 				printf("fd: %d\n",i);
@@ -123,8 +165,16 @@ void* socketRunner(void *arg)
 						s, sizeof s);
 					printf("server: got connection from %s\n", s);
 					send(new_fd, "Hello World!!", 13, 0);
-					close(new_fd);
 					FD_CLR(new_fd, &master);
+
+					// Add client info to list
+					struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
+					strcpy(newClient->clientAddress,s);
+					newClient->sockfd = new_fd;
+					newClient->next = NULL;
+					insertClientToList(newClient);
+
+
 				} else {
 					printf("sending data\n");
 					if(send(i, "Hello World!", 13, 0) == -1){
@@ -148,23 +198,3 @@ void closeAllConnections()
 	}
   FD_CLR(listener, &master);
 }
-
-//int main(void)
-//{
-//  int err,i=0;
-//		if(setup_socket_() == 0) {
-//    while(i < 1)
-//    {
-//        err = pthread_create(&(tid[i]), NULL, &socketRunner, NULL);
-//        if (err != 0)
-//            printf("\ncan't create thread :[%s]", strerror(err));
-//        else
-//            printf("\n Thread created successfully\n");
-//
-//        i++;
-//    }
-//	while(1);
-//}
-//
-//    return 0;
-//}

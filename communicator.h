@@ -13,9 +13,17 @@
 #include <arpa/inet.h>
 
 #define BACKLOG_CONN 10
-#define SERVPORT "27000"
 
 void *socketRunner(void*);
-int setup_socket_();
+int setup_server_socket(char*);
 void closeAllConnections();
 
+struct connectionInfo
+{
+	char clientAddress[100];
+	int sockfd;
+	struct connectionInfo *next;
+};
+
+extern struct connectionInfo *startPtr;
+extern struct connectionInfo *endPtr;

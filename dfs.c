@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 	prepareCommandPatterns();
   printf("\nStarting %s on port %d", programType, portNo);
 
-	if(setup_socket_() == 0)
+	if(setup_server_socket(argv[2]) == 0)
 	{
 		// Start listener thread
 		if(pthread_create(&tid, NULL, &socketRunner, NULL)!=0) {
@@ -85,6 +85,7 @@ void executeCommand(char *userInput)
 				break;
 				case LIST:
 					printf("DO LIST\n");
+					doList();
 					return;
 				break;
 				case TERMINATE:
