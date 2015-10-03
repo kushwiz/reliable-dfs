@@ -14,3 +14,8 @@
 
 #define BACKLOG_CONN 10
 #define SERVPORT "27000"
+
+void *socketRunner(void*);
+int setup_socket_();
+void closeAllConnections();
+

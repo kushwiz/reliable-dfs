@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-c -Wall
 LDFLAGS=
-SOURCES=dfs.c kbcommands.c
+SOURCES=dfs.c kbcommands.c communicator.c
 OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=dfs
 

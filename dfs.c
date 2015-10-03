@@ -1,10 +1,13 @@
 #include "kbcommands.h"
+#include "communicator.h"
+#include<pthread.h>
 
 int isClient = 0;
 int currentCommand;
 
 int main(int argc, char **argv)
 {
+	pthread_t tid;
   char programType[10];
   char userInput[100];
   int portNo;
@@ -30,6 +33,16 @@ int main(int argc, char **argv)
 	prepareCommandPatterns();
   printf("\nStarting %s on port %d", programType, portNo);
 
+	if(setup_socket_() == 0)
+	{
+		// Start listener thread
+		if(pthread_create(&tid, NULL, &socketRunner, NULL)!=0) {
+			printf("thread error\n");
+			return 1;
+		} else {
+			printf("thread created successfully!\n");
+		}
+	}
 	do
 	{
 		scanf("%s", userInput);
@@ -55,7 +68,7 @@ void executeCommand(char *userInput)
 			switch(i)
 			{
 				case HELP:
-					printf("DO HELP");
+					printf("DO HELP\n");
 					return;
 				break;
 				case CREATOR:
@@ -65,18 +78,19 @@ void executeCommand(char *userInput)
 				case DISPLAY:
 				break;
 				case REGISTER:
-					printf("DO REGISTER");
+					printf("DO REGISTER\n");
 					return;
 				break;
 				case CONNECT:
 				break;
 				case LIST:
-					printf("DO LIST");
+					printf("DO LIST\n");
 					return;
 				break;
 				case TERMINATE:
 				break;
 				case QUIT:
+					closeAllConnections();
 					return;
 				break;
 				case GET:

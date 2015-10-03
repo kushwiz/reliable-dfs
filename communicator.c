@@ -1,7 +1,5 @@
 #include "communicator.h"
-#include <pthread.h>
 
-static int sockfd;
 static int listener;
 static fd_set master;
 static int fdmax;
@@ -30,10 +28,8 @@ void *get_in_addr(struct sockaddr *sa)
 int setup_socket_()
 {
     struct addrinfo hints, *servinfo, *p;
-    struct sigaction sa;
     int yes=1;
     int rv;
-		int listener;
 
 		FD_ZERO(&master);
 
@@ -49,20 +45,20 @@ int setup_socket_()
 
     // loop through all the results and bind to the first we can
     for(p = servinfo; p != NULL; p = p->ai_next) {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype,
+        if ((listener = socket(p->ai_family, p->ai_socktype,
                 p->ai_protocol)) == -1) {
             perror("server: socket");
             continue;
         }
 
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes,
+        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes,
                 sizeof(int)) == -1) {
             perror("setsockopt");
             exit(1);
         }
 
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd);
+        if (bind(listener, p->ai_addr, p->ai_addrlen) == -1) {
+            close(listener);
             perror("server: bind");
             continue;
         }
@@ -77,7 +73,8 @@ int setup_socket_()
         exit(1);
     }
 
-    if (listen(sockfd, BACKLOG_CONN) == -1) {
+    if (listen(listener, BACKLOG_CONN) == -1) {
+				printf("listen error\n");
         perror("listen");
         exit(1);
     }
@@ -90,7 +87,6 @@ int setup_socket_()
 
 void* socketRunner(void *arg)
 {
-	printf("Thread run");
 	int new_fd;
   struct sockaddr_storage their_addr; // connector's address information
   socklen_t sin_size;
@@ -114,7 +110,7 @@ void* socketRunner(void *arg)
 				printf("fd: %d\n",i);
 				if(i == listener) {
 					sin_size = sizeof their_addr;
-					new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+					new_fd = accept(listener, (struct sockaddr *)&their_addr, &sin_size);
 					if (new_fd == -1) {
 						perror("accept");
 						continue;
@@ -141,44 +137,34 @@ void* socketRunner(void *arg)
 	} // infinite loop
 }
 
-pthread_t tid[2];
-
-void* doSomeThing(void *arg)
+void closeAllConnections()
 {
-    unsigned long i = 0;
-    pthread_t id = pthread_self();
-
-    if(pthread_equal(id,tid[0]))
-    {
-        printf("\n First thread processing\n");
-    }
-    else
-    {
-        printf("\n Second thread processing\n");
-    }
-
-    for(i=0; i<(0xFFFFFFFF);i++);
-
-    return NULL;
+	for(int i=0;i<fdmax;i++)
+	{
+		if(i!=listener)
+		{
+			FD_CLR(i, &master);
+		}
+	}
+  FD_CLR(listener, &master);
 }
 
-
-int main(void)
-{
-  int err,i=0;
-		if(setup_socket_() == 0) {
-    while(i < 1)
-    {
-        err = pthread_create(&(tid[i]), NULL, &socketRunner, NULL);
-        if (err != 0)
-            printf("\ncan't create thread :[%s]", strerror(err));
-        else
-            printf("\n Thread created successfully\n");
-
-        i++;
-    }
-	while(1);
-}
-
-    return 0;
-}
+//int main(void)
+//{
+//  int err,i=0;
+//		if(setup_socket_() == 0) {
+//    while(i < 1)
+//    {
+//        err = pthread_create(&(tid[i]), NULL, &socketRunner, NULL);
+//        if (err != 0)
+//            printf("\ncan't create thread :[%s]", strerror(err));
+//        else
+//            printf("\n Thread created successfully\n");
+//
+//        i++;
+//    }
+//	while(1);
+//}
+//
+//    return 0;
+//}

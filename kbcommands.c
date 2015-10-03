@@ -47,5 +47,5 @@ void prepareCommandPatterns()
 
 void doCreator()
 {
-	printf("Name: Kushal Bhandari\nUBIT name: kbhandar\nUB email: kbhandar@buffalo.edu");
+	printf("Name: Kushal Bhandari\nUBIT name: kbhandar\nUB email: kbhandar@buffalo.edu\n");
 }
