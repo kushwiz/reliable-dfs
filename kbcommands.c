@@ -44,3 +44,8 @@ void prepareCommandPatterns()
 	strcpy(commandPatterns[PUT], "^PUT ([0-9]+) (.+)$");
 	strcpy(commandPatterns[SYNC], "^SYNC$");
 }
+
+void doCreator()
+{
+	printf("Name: Kushal Bhandari\nUBIT name: kbhandar\nUB email: kbhandar@buffalo.edu");
+}

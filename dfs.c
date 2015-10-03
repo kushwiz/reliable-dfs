@@ -32,9 +32,8 @@ int main(int argc, char **argv)
 
 	do
 	{
-	printf("\n> ");
-	scanf("%s", userInput);
-	executeCommand(userInput);
+		scanf("%s", userInput);
+		executeCommand(userInput);
 	}while(currentCommand!=QUIT);
 
   return 0;
@@ -60,6 +59,8 @@ void executeCommand(char *userInput)
 					return;
 				break;
 				case CREATOR:
+					doCreator();
+					return;
 				break;
 				case DISPLAY:
 				break;
@@ -76,6 +77,7 @@ void executeCommand(char *userInput)
 				case TERMINATE:
 				break;
 				case QUIT:
+					return;
 				break;
 				case GET:
 				break;

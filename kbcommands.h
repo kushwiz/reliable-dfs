@@ -21,3 +21,5 @@ void prepareCommandPatterns();
 extern char commandPatterns[CMDCOUNT][50];
 
 void executeCommand();
+
+void doCreator();
