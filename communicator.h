@@ -14,9 +14,9 @@
 
 #define BACKLOG_CONN 10
 
-void *socketRunner(void*);
+void *server_socket_runner(void*);
 int setup_server_socket(char*);
-void closeAllConnections();
+void close_all_server_connections();
 
 struct connectionInfo
 {
@@ -27,3 +27,6 @@ struct connectionInfo
 
 extern struct connectionInfo *startPtr;
 extern struct connectionInfo *endPtr;
+extern int isClient;
+
+void send_data_via_socket(char*, char*, char*, int);
