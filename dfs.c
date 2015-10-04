@@ -6,7 +6,7 @@ int currentCommand;
 
 int main(int argc, char **argv)
 {
-	pthread_t tid;
+	pthread_t tid[2];
 	char programType[10];
 	char userInput[100];
 	int portNo;
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
 	if(setup_server_socket(argv[2]) == 0)
 	{
 		// Start listener thread
-		if(pthread_create(&tid, NULL, &server_socket_runner, NULL)!=0) {
+		if(pthread_create(&tid[0], NULL, &server_socket_runner, NULL)!=0) {
 			printf("thread error\n");
 			return 1;
 		} else {
