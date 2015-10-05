@@ -4,3 +4,5 @@
 dfs.o
 kbcommands.o
 dfs
+communicator.o
+datapacker.o

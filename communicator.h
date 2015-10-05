@@ -11,7 +11,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <arpa/inet.h>
-
+#include "datapacker.h"
 #define BACKLOG_CONN 10
 
 void *server_socket_runner(void*);
@@ -29,4 +29,10 @@ extern struct connectionInfo *startPtr;
 extern struct connectionInfo *endPtr;
 extern int isClient;
 
-void send_data_via_socket(char*, char*, char*, int);
+void send_data_via_socket(char*, char*, unsigned char*, int);
+
+struct messageData
+{
+	int command;
+	char *data;
+};

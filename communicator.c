@@ -143,7 +143,7 @@ void* server_socket_runner(void *arg)
 	socklen_t sin_size;
 	char s[INET6_ADDRSTRLEN];
 	fd_set read_fds;
-	char buf[256];    // buffer for client data
+	unsigned char buf[256];    // buffer for client data
 	int nbytes;
 	fd_set slave_read_fds;
 	struct timeval tv;
@@ -205,11 +205,14 @@ void* server_socket_runner(void *arg)
 						removeClientFromMasterList(i);
 						FD_CLR(i, &master); // remove from master set
 					} else {
-						printf("recd data:%s\n", buf);
-						if (send(i, buf, sizeof buf, 0) == -1) {
-							perror("send");
-							exit(1);
-						}
+						char s2[200];
+						int cmdl;
+						unpack(buf, "h200s", &cmdl, s2);
+						printf("recd data: %d %s\n", cmdl, s2);
+			//			if (send(i, buf, sizeof buf, 0) == -1) {
+			//				perror("send");
+			//				exit(1);
+			//			}
 					} // send
 				} // not a listener
 
@@ -238,7 +241,7 @@ void* server_socket_runner(void *arg)
 	} // infinite loop
 }
 
-void send_data_via_socket(char *serverAddress, char *portNo, char *data, int data_size)
+void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data, int data_size)
 {
 	int  senderfd, numbytes;
 	struct addrinfo hints, *servinfo, *p;
