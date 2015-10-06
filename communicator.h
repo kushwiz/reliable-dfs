@@ -14,7 +14,7 @@
 #include "datapacker.h"
 #define BACKLOG_CONN 10
 
-void *server_socket_runner(void*);
+void server_socket_runner();
 int setup_server_socket(char*);
 void close_all_server_connections();
 
@@ -36,3 +36,5 @@ struct messageData
 	int command;
 	char *data;
 };
+
+void process_socket_actions(int, unsigned char*);

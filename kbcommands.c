@@ -33,17 +33,17 @@ int canExecute(int isClient, enum Commands cmd)
 
 void prepareCommandPatterns()
 {
-  strcpy(commandPatterns[HELP], "^HELP$");
-  strcpy(commandPatterns[CREATOR], "^CREATOR$");
-  strcpy(commandPatterns[DISPLAY], "^DISPLAY$");
-  strcpy(commandPatterns[REGISTER], "^REGISTER (.+) ([0-9]+)$");
-  strcpy(commandPatterns[CONNECT], "^CONNECT (.+) ([0-9]+)$");
-  strcpy(commandPatterns[LIST], "^LIST$");
-  strcpy(commandPatterns[TERMINATE], "^TERMINATE ([0-9]+)$");
-  strcpy(commandPatterns[QUIT], "^QUIT$");
-  strcpy(commandPatterns[GET], "^GET ([0-9]+) (.+)$");
-  strcpy(commandPatterns[PUT], "^PUT ([0-9]+) (.+)$");
-  strcpy(commandPatterns[SYNC], "^SYNC$");
+  strcpy(commandPatterns[HELP], "^HELP\n");
+  strcpy(commandPatterns[CREATOR], "^CREATOR\n");
+  strcpy(commandPatterns[DISPLAY], "^DISPLAY\n");
+  strcpy(commandPatterns[REGISTER], "^REGISTER (.+) ([0-9]+)\n");
+  strcpy(commandPatterns[CONNECT], "^CONNECT (.+) ([0-9]+)\n");
+  strcpy(commandPatterns[LIST], "^LIST\n");
+  strcpy(commandPatterns[TERMINATE], "^TERMINATE ([0-9]+)\n");
+  strcpy(commandPatterns[QUIT], "^QUIT\n");
+  strcpy(commandPatterns[GET], "^GET ([0-9]+) (.+)\n");
+  strcpy(commandPatterns[PUT], "^PUT ([0-9]+) (.+)\n");
+  strcpy(commandPatterns[SYNC], "^SYNC\n");
 }
 
 void doCreator()
