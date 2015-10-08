@@ -55,11 +55,13 @@ void doList()
 {
   struct connectionInfo *itr;
   itr = startPtr;
-
+  printf("id:\tHostname\t\t\tIP address\tPort No.\n");
+  int i = 1;
   while(itr!=NULL)
   {
-    printf("%s|||%d\n",itr->clientAddress,itr->sockfd);
+    printf("%d\t%s\t%s\t%s\n",i,itr->fqdn,itr->clientAddress,itr->portNo);
     itr = itr->next;
+    i+=1;
   }
 
 }

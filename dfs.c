@@ -23,9 +23,7 @@ int main(int argc, char **argv)
     }
   }
 
-	printf("ok");
   prepareCommandPatterns();
-	printf("ok1");
   printf("\nStarted %s on port %d\n", programType, portNo);
 
 	setup_server_socket(argv[2]);
