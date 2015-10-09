@@ -6,3 +6,4 @@ kbcommands.o
 dfs
 communicator.o
 datapacker.o
+datastructure.o

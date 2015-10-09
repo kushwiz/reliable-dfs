@@ -1,5 +1,6 @@
 #include "kbcommands.h"
 #include "communicator.h"
+#include "datastructure.h"
 
 enum Commands Server_Commands[] = {HELP,CREATOR,DISPLAY,LIST,QUIT};
 enum Commands Client_Commands[] = {HELP,CREATOR,DISPLAY,REGISTER,CONNECT,LIST,TERMINATE,QUIT,GET,PUT,SYNC};

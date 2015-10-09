@@ -1,5 +1,6 @@
 #include "communicator.h"
 #include "kbcommands.h"
+#include "datastructure.h"
 
 #define MAX(x,y) (x>y)?x:y
 
@@ -10,14 +11,12 @@ fd_set master;
 int fdmax;
 int isClient = 0;
 
-struct connectionInfo *startPtr=NULL;
-
-struct connectionInfo *endPtr=NULL;
-
 fd_set slave;
 int slave_fdmax;
 
 char *port;
+char shostname[500];
+char sipaddr[100];
 
 //State constants
 int is_registered = 0;
@@ -32,55 +31,6 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
-
-void insertClientToMasterList(struct connectionInfo *newClient)
-{
-	if(startPtr==NULL)
-	{
-		startPtr = newClient;
-		endPtr = newClient;
-		endPtr->next=NULL;
-	}
-	else
-	{
-		endPtr->next = newClient;
-		endPtr = newClient;
-		endPtr->next = NULL;
-	}
-}
-
-
-void removeClientFromMasterList(int sockfd)
-{
-	struct connectionInfo *itr;
-	itr = startPtr;
-	struct connectionInfo *itrPrev;
-	itrPrev = itr;
-
-	while(itr!=NULL)
-	{
-		if(itr->sockfd == sockfd)
-		{
-			if(startPtr == itr)
-			{
-				startPtr = itr->next;
-				itrPrev = startPtr;
-				free(itr);
-			}
-			else
-			{
-				itrPrev->next = itr->next;
-				free(itr);
-				itr = itrPrev->next;
-			}
-			return;
-		}
-		else
-		{	itrPrev = itr;
-			itr=itr->next;
-		}
-	}
-}
 
 int setup_server_socket(char *portNo)
 {
@@ -140,6 +90,20 @@ int setup_server_socket(char *portNo)
 
 	FD_SET(listener, &master);
 	fdmax = listener;
+
+	if(isClient == 0)
+	{
+		gethostname(&shostname[0], sizeof(shostname));
+		struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
+		hostname_to_ip(&shostname[0], &sipaddr[0]);
+		strcpy(newClient->clientAddress, sipaddr);
+		strcpy(newClient->fqdn, shostname);
+		strcpy(newClient->portNo, portNo);
+		newClient->sockfd = listener;
+		newClient->next = NULL;
+		insertClientToMasterList(newClient);
+	}
+
 	server_socket_runner();
 	return 0;
 }
@@ -158,6 +122,7 @@ void server_socket_runner()
 	struct timeval tv = {0, 200000};	// 200ms timeout
 	FD_ZERO(&slave_read_fds);
 	FD_SET(0,&master);
+
 	while(currentCommand!=QUIT) {  // main accept() loop
 		read_fds = master;
 		slave_read_fds = slave;
@@ -363,7 +328,7 @@ void executeCommand(char *userInput)
 					return;
 					break;
 				case DISPLAY:
-					printf("IP:%s Port:%s\n", getipbyfd(fdmax), port);
+					printf("IP:%s Port:%s\n", sipaddr, port);
 					return;
 				case REGISTER:
 					if(is_registered == 0) {
@@ -373,11 +338,14 @@ void executeCommand(char *userInput)
 					strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
 					char *serverPort = malloc(50*sizeof(char));
 					strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
-//								printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
-	//							printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
 					printf("Server address:%s\n", serverAddress);
 					printf("Server port: %s\n", serverPort);
 					send_data_via_socket(serverAddress, serverPort, buf, packetsize);
+					struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
+					strcpy(conObj->clientAddress, serverAddress);
+					strcpy(conObj->portNo, serverPort);
+					strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
+					insertClientToMasterList(conObj);
 					is_registered = 1;}
 					else {
 					  printf("Already Registered\n");
@@ -445,4 +413,31 @@ inet_pton(AF_INET, ipaddr, &sa.sin_addr);
     exit(1);
   }
   return &node[0];
+}
+
+int hostname_to_ip(char *hostname , char *ip)
+{
+    struct addrinfo hints, *servinfo, *p;
+    struct sockaddr_in *h;
+    int rv;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ( (rv = getaddrinfo( hostname , "http" , &hints , &servinfo)) != 0)
+    {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+        return 1;
+    }
+
+    // loop through all the results and connect to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next)
+    {
+        h = (struct sockaddr_in *) p->ai_addr;
+        strcpy(ip , inet_ntoa( h->sin_addr ) );
+    }
+
+    freeaddrinfo(servinfo); // all done with this structure
+    return 0;
 }
