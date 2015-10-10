@@ -93,6 +93,7 @@ int setup_server_socket(char *portNo)
 
 	if(isClient == 0)
 	{
+		printf("isCLient:%d\n",isClient);
 		gethostname(&shostname[0], sizeof(shostname));
 		struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
 		hostname_to_ip(&shostname[0], &sipaddr[0]);
@@ -102,6 +103,8 @@ int setup_server_socket(char *portNo)
 		newClient->sockfd = listener;
 		newClient->next = NULL;
 		insertClientToServerList(newClient);
+			printf("fqdn:%s\n",newClient->fqdn);
+	printf("fqdn:%s\n",serverliststartPtr->fqdn);
 	}
 
 	server_socket_runner();

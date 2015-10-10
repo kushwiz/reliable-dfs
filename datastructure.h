@@ -10,7 +10,15 @@ struct connectionInfo
 extern struct connectionInfo *serverliststartPtr;
 extern struct connectionInfo *serverlistendPtr;
 
+extern struct connectionInfo *peerliststartPtr;
+extern struct connectionInfo *peerlistendPtr;
+
 void insertClientToServerList(struct connectionInfo*);
 void removeClientFromServerList(int);
 struct connectionInfo* getClientFromServerList(int);
 void removeClientFromServerListWithIpPort(char*,char*);
+
+void insertClientToPeerList(struct connectionInfo*);
+void removeClientFromPeerList(int);
+struct connectionInfo* getClientFromPeerList(int);
+void removeClientFromPeerListWithIpPort(char*,char*);
