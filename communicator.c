@@ -154,12 +154,14 @@ void server_socket_runner()
 						continue;
 					} else {
 						FD_SET(new_fd, &master);
+						if(fdmax<new_fd){
 						fdmax = new_fd;
+						}
 					}
 					inet_ntop(their_addr.ss_family,
 							get_in_addr((struct sockaddr *)&their_addr),
 							s, sizeof s);
-					printf("server: got connection from %s\n", s);
+					printf("server: got connection from %s  sfd:%d\n", s, new_fd);
 
 					// Add client info to list
 					//struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
@@ -181,19 +183,22 @@ void server_socket_runner()
 						printf("closing\n");
 						close(i); // bye!
 						FD_CLR(i, &master); // remove from master set
-						struct connectionInfo *leavingClient = getClientFromMasterList(i);
-						unsigned char innerbuf[256];
-						int innerpacketsize = 0;
-						innerpacketsize += pack(innerbuf+innerpacketsize, "h", REMOVE_FROM_SERVER_IP_LIST);
-						innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->clientAddress);
-						innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->portNo);
-						for(k=0;k<=fdmax;k++)
+						if(isClient == 0)
 						{
-							if(k!=listener&&k>listener){
-								send(k, &innerbuf, innerpacketsize,0);
+							struct connectionInfo *leavingClient = getClientFromMasterList(i);
+							unsigned char innerbuf[256];
+							int innerpacketsize = 0;
+							innerpacketsize += pack(innerbuf+innerpacketsize, "h", REMOVE_FROM_SERVER_IP_LIST);
+							innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->clientAddress);
+							innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->portNo);
+							for(k=0;k<=fdmax;k++)
+							{
+								if(k!=listener && k>listener){
+									send(k, &innerbuf, innerpacketsize,0);
+								}
 							}
+							removeClientFromMasterList(i);
 						}
-						removeClientFromMasterList(i);
 					} else {
 						int cmdl;
 						unpack(buf, "h", &cmdl);
@@ -202,27 +207,27 @@ void server_socket_runner()
 				} // not a listener
 
 			} // fd_isset
-			else if(FD_ISSET(i, &slave_read_fds)) {
-				printf("clientrun_fd: %d\n",i);
-				// handle data from a client
-				if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
-					// got error or connection closed by client
-					if (nbytes == 0) {
-						// connection closed
-						printf("recvclient: socket %d hung up\n", i);
-					} else {
-						perror("recv");
-					}
-					close(i); // bye!
-					//removeClientFromList(i);
-					FD_CLR(i, &slave); // remove from master set
-				} else {
-					int cmdl;
-					unpack(buf, "h", &cmdl);
-					process_socket_actions(cmdl, buf, i);
-				} // send
+		//	else if(FD_ISSET(i, &slave_read_fds)) {
+		//		printf("clientrun_fd: %d\n",i);
+		//		// handle data from a client
+		//		if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
+		//			// got error or connection closed by client
+		//			if (nbytes == 0) {
+		//				// connection closed
+		//				printf("recvclient: socket %d hung up\n", i);
+		//			} else {
+		//				perror("recv");
+		//			}
+		//			close(i); // bye!
+		//			//removeClientFromList(i);
+		//			FD_CLR(i, &slave); // remove from master set
+		//		} else {
+		//			int cmdl;
+		//			unpack(buf, "h", &cmdl);
+		//			process_socket_actions(cmdl, buf, i);
+		//		} // send
 
-			}
+		//	}
 
 		} // fdmax loop
 	} // infinite loop
