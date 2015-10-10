@@ -1,6 +1,7 @@
 #include "datastructure.h"
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
 struct connectionInfo *startPtr=NULL;
 
@@ -56,3 +57,42 @@ void removeClientFromMasterList(int sockfd)
 }
 
 
+struct connectionInfo* getClientFromMasterList(int sockfd)
+{
+	struct connectionInfo *itr;
+	itr = startPtr;
+	while(itr!=NULL)
+	{
+		if(itr->sockfd==sockfd)
+		{
+			return itr;
+		}
+		else
+		itr = itr->next;
+	}
+	return NULL;
+}
+
+void removeClientFromMasterListWithIpPort(char *ip, char *portNo)
+{
+	struct connectionInfo *itr;
+	struct connectionInfo *itrPrev;
+
+	itr = startPtr;
+	itrPrev = itr;
+
+	while(itr!=NULL)
+	{
+		if(strcmp(ip, itr->clientAddress)==0 && strcmp(portNo,itr->portNo)==0)
+		{
+			itrPrev->next = itr->next;
+			free(itr);
+			itr = itrPrev->next;
+		}
+		else
+		{
+			itrPrev = itr;
+			itr = itr->next;
+		}
+	}
+}

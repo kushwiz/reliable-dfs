@@ -122,23 +122,23 @@ void server_socket_runner()
 	struct timeval tv = {0, 200000};	// 200ms timeout
 	FD_ZERO(&slave_read_fds);
 	FD_SET(0,&master);
-
+	int k=0;
 	while(currentCommand!=QUIT) {  // main accept() loop
 		read_fds = master;
 		slave_read_fds = slave;
 		int i=0;
-		if(select(fdmax+1, &read_fds, NULL, NULL, &tv) == -1)
+		if(select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1)
 		{
 			perror("select1");
 			exit(4);
 		}
-		if(select(slave_fdmax+1, &slave_read_fds, NULL, NULL, &tv) == -1)
-		{
-			perror("select2");
-			exit(4);
-		}
+		//		if(select(slave_fdmax+1, &slave_read_fds, NULL, NULL, &tv) == -1)
+		//		{
+		//			perror("select2");
+		//			exit(4);
+		//		}
 		int max = MAX(fdmax, slave_fdmax);
-		for(i=0;i<=max;i++){
+		for(i=0;i<=fdmax;i++){
 			if(FD_ISSET(i, &read_fds)) {
 				//	printf("fd:%d\n",i);
 				if( i == 0 )
@@ -178,9 +178,22 @@ void server_socket_runner()
 						} else {
 							perror("recv");
 						}
+						printf("closing\n");
 						close(i); // bye!
-						removeClientFromMasterList(i);
 						FD_CLR(i, &master); // remove from master set
+						struct connectionInfo *leavingClient = getClientFromMasterList(i);
+						unsigned char innerbuf[256];
+						int innerpacketsize = 0;
+						innerpacketsize += pack(innerbuf+innerpacketsize, "h", REMOVE_FROM_SERVER_IP_LIST);
+						innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->clientAddress);
+						innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->portNo);
+						for(k=0;k<=fdmax;k++)
+						{
+							if(k!=listener&&k>listener){
+								send(k, &innerbuf, innerpacketsize,0);
+							}
+						}
+						removeClientFromMasterList(i);
 					} else {
 						int cmdl;
 						unpack(buf, "h", &cmdl);
@@ -204,7 +217,9 @@ void server_socket_runner()
 					//removeClientFromList(i);
 					FD_CLR(i, &slave); // remove from master set
 				} else {
-					printf("recd data:%s\n", buf);
+					int cmdl;
+					unpack(buf, "h", &cmdl);
+					process_socket_actions(cmdl, buf, i);
 				} // send
 
 			}
@@ -216,13 +231,37 @@ void server_socket_runner()
 void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 {
 
-			int commandTemp;
-			char *saddress, sport[50];
+	int commandTemp, i=0, packetsize = 0, numbytes;
+	char *saddress, sport[50];
+	unsigned char buff[256], buff1[256];
+	char caddress[100], pno[10], cfqdn[100];
+	fd_set read_fds;
 	switch(cmdl)
 	{
 		case REGISTER:
+			read_fds = master;
 			saddress = getipbyfd(sfd);
 			printf("new client registering:%s\n", saddress);
+			struct connectionInfo *itr = startPtr;
+			while(itr!=NULL) {
+				memset(buff,0,256);
+				packetsize=0;
+				packetsize += pack(buff+packetsize, "h", ADD_TO_SERVER_IP_LIST);
+				packetsize += pack(buff+packetsize, "s", itr->clientAddress);
+				packetsize += pack(buff+packetsize, "s", itr->portNo);
+				packetsize += pack(buff+packetsize, "s", itr->fqdn);
+				if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
+				{
+					perror("send");
+					exit(1);
+				}
+				else
+				{
+					printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+				}
+				itr = itr->next;
+				usleep(1000);
+			}
 			unpack(buf, "h100s", &commandTemp, sport);
 			char *fqdn = getfqdnbyip(saddress, &sport[0]);
 			struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
@@ -233,7 +272,42 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			newClient->next = NULL;
 			printf("fqdn:%s\n",newClient->fqdn);
 			insertClientToMasterList(newClient);
-		break;
+
+			packetsize = 0;
+			packetsize += pack(buff1+packetsize, "h", ADD_TO_SERVER_IP_LIST);
+			packetsize += pack(buff1+packetsize, "s", newClient->clientAddress);
+			packetsize += pack(buff1+packetsize, "s", newClient->portNo);
+			packetsize += pack(buff1+packetsize, "s", newClient->fqdn);
+			for(i=0;i<=fdmax;i++){
+				if(i!=listener && i>listener) {
+					printf("sending to %d\n",i);
+					if ((numbytes = send(i, &buff1, packetsize, 0)) == -1) {
+						perror("send");
+						exit(1);
+					}
+					else {printf("bytes sent: %d  packetsize:%d to:%d\n",numbytes,packetsize,i);}
+				}
+			}
+			break;
+		case ADD_TO_SERVER_IP_LIST:
+			printf("add to server ip list\n");
+			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
+			printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
+			struct connectionInfo *newClient1 = malloc(sizeof(struct connectionInfo));
+			strcpy(newClient1->clientAddress, caddress);
+			strcpy(newClient1->portNo, pno);
+			strcpy(newClient1->fqdn, cfqdn);
+			newClient1->next = NULL;
+			insertClientToMasterList(newClient1);
+			break;
+
+		case REMOVE_FROM_SERVER_IP_LIST:
+			printf("remove from server ip list\n");
+			unpack(buf, "h100s10s", &commandTemp, caddress,pno);
+			printf("caddress:%s, pno:%s\n",caddress,pno);
+			removeClientFromMasterListWithIpPort(caddress, pno);
+			break;
+
 	}
 }
 
@@ -281,8 +355,8 @@ void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data
 
 	freeaddrinfo(servinfo);  //all done with this structure
 
-	FD_SET(senderfd, &slave);
-	slave_fdmax = senderfd;
+	FD_SET(senderfd, &master);
+	fdmax = senderfd;
 	printf("slave_fdmax:%d\n",slave_fdmax);
 	if ((numbytes = send(senderfd, data, data_size, 0)) == -1) {
 		perror("send");
@@ -332,23 +406,23 @@ void executeCommand(char *userInput)
 					return;
 				case REGISTER:
 					if(is_registered == 0) {
-					packetsize = pack(buf, "hs", currentCommand, port);
-					packi16(buf+2, packetsize);
-					char *serverAddress = malloc(100*sizeof(char));
-					strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
-					char *serverPort = malloc(50*sizeof(char));
-					strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
-					printf("Server address:%s\n", serverAddress);
-					printf("Server port: %s\n", serverPort);
-					send_data_via_socket(serverAddress, serverPort, buf, packetsize);
-					struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
-					strcpy(conObj->clientAddress, serverAddress);
-					strcpy(conObj->portNo, serverPort);
-					strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
-					insertClientToMasterList(conObj);
-					is_registered = 1;}
+						packetsize = pack(buf, "hs", currentCommand, port);
+						packi16(buf+2, packetsize);
+						char *serverAddress = malloc(100*sizeof(char));
+						strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
+						char *serverPort = malloc(50*sizeof(char));
+						strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
+						printf("Server address:%s\n", serverAddress);
+						printf("Server port: %s\n", serverPort);
+						send_data_via_socket(serverAddress, serverPort, buf, packetsize);
+						//					struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
+						//					strcpy(conObj->clientAddress, serverAddress);
+						//					strcpy(conObj->portNo, serverPort);
+						//					strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
+						//					insertClientToMasterList(conObj);
+						is_registered = 1;}
 					else {
-					  printf("Already Registered\n");
+						printf("Already Registered\n");
 					}
 					return;
 					break;
@@ -402,42 +476,42 @@ char* getipbyfd(int fd)
 
 char* getfqdnbyip(char *ipaddr, char *servport)
 {
-struct sockaddr_in sa;
-sa.sin_family = AF_INET;
-inet_pton(AF_INET, ipaddr, &sa.sin_addr);
-  char node[NI_MAXHOST];
-  int res = getnameinfo((struct sockaddr*)&sa, sizeof(sa), node, sizeof(node), NULL, 0, 0);
-  if (res)
-  {
-    printf("fqdn:%s\n", gai_strerror(res));
-    exit(1);
-  }
-  return &node[0];
+	struct sockaddr_in sa;
+	sa.sin_family = AF_INET;
+	inet_pton(AF_INET, ipaddr, &sa.sin_addr);
+	char node[NI_MAXHOST];
+	int res = getnameinfo((struct sockaddr*)&sa, sizeof(sa), node, sizeof(node), NULL, 0, 0);
+	if (res)
+	{
+		printf("fqdn:%s\n", gai_strerror(res));
+		exit(1);
+	}
+	return &node[0];
 }
 
 int hostname_to_ip(char *hostname , char *ip)
 {
-    struct addrinfo hints, *servinfo, *p;
-    struct sockaddr_in *h;
-    int rv;
+	struct addrinfo hints, *servinfo, *p;
+	struct sockaddr_in *h;
+	int rv;
 
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
-    hints.ai_socktype = SOCK_STREAM;
+	memset(&hints, 0, sizeof hints);
+	hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+	hints.ai_socktype = SOCK_STREAM;
 
-    if ( (rv = getaddrinfo( hostname , "http" , &hints , &servinfo)) != 0)
-    {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-        return 1;
-    }
+	if ( (rv = getaddrinfo( hostname , "http" , &hints , &servinfo)) != 0)
+	{
+		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		return 1;
+	}
 
-    // loop through all the results and connect to the first we can
-    for(p = servinfo; p != NULL; p = p->ai_next)
-    {
-        h = (struct sockaddr_in *) p->ai_addr;
-        strcpy(ip , inet_ntoa( h->sin_addr ) );
-    }
+	// loop through all the results and connect to the first we can
+	for(p = servinfo; p != NULL; p = p->ai_next)
+	{
+		h = (struct sockaddr_in *) p->ai_addr;
+		strcpy(ip , inet_ntoa( h->sin_addr ) );
+	}
 
-    freeaddrinfo(servinfo); // all done with this structure
-    return 0;
+	freeaddrinfo(servinfo); // all done with this structure
+	return 0;
 }
