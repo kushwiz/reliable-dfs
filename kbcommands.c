@@ -56,11 +56,11 @@ void doList()
 {
   struct connectionInfo *itr;
   itr = peerliststartPtr;
-  printf("id:\tHostname\t\t\tIP address\tPort No.\n");
+  printf("id:\tHostname\t\t\tIP address\tPort No.\tSfd\n");
   int i = 1;
   while(itr!=NULL)
   {
-    printf("%d\t%s\t%s\t%s\n",i,itr->fqdn,itr->clientAddress,itr->portNo);
+    printf("%d\t%s\t%s\t%s\t%d\n",i,itr->fqdn,itr->clientAddress,itr->portNo,itr->sockfd);
     itr = itr->next;
     i+=1;
   }

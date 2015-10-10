@@ -20,7 +20,7 @@ void close_all_server_connections();
 
 extern int isClient;
 
-void send_data_via_socket(char*, char*, unsigned char*, int);
+void send_data_via_socket(char*, char*, unsigned char*, int, int*);
 void process_socket_actions(int, unsigned char*, int);
 
 char* getipbyfd(int);

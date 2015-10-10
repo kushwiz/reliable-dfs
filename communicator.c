@@ -312,6 +312,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			strcpy(newPeer->clientAddress,saddress);
 			strcpy(newPeer->portNo, sport);
 			strcpy(newPeer->fqdn, fqdn);
+			newPeer->sockfd = sfd;
 			newPeer->next = NULL;
 			insertClientToPeerList(newPeer);
 			free(fqdn);
@@ -341,7 +342,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 }
 
 
-void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data, int data_size)
+void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data, int data_size, int *sfd)
 {
 	int  senderfd, numbytes;
 	struct addrinfo hints, *servinfo, *p;
@@ -386,7 +387,8 @@ void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data
 
 	FD_SET(senderfd, &master);
 	fdmax = senderfd;
-	printf("slave_fdmax:%d\n",slave_fdmax);
+	*sfd = senderfd;
+	printf("slave_fdmax:%d\n",fdmax);
 	if ((numbytes = send(senderfd, data, data_size, 0)) == -1) {
 		perror("send");
 		exit(1);
@@ -443,8 +445,8 @@ void executeCommand(char *userInput)
 						strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
 						printf("Server address:%s\n", serverAddress);
 						printf("Server port: %s\n", serverPort);
-						send_data_via_socket(serverAddress, serverPort, buf, packetsize);
 						struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
+						send_data_via_socket(serverAddress, serverPort, buf, packetsize, &conObj->sockfd);
 						strcpy(conObj->clientAddress, serverAddress);
 						strcpy(conObj->portNo, serverPort);
 						strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
@@ -473,10 +475,10 @@ void executeCommand(char *userInput)
 						}
 						else
 						{
-							send_data_via_socket(serverAddress, serverPort, buf, packetsize);
-							//struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
-							//memcpy(newPeer, foundClient, sizeof(foundClient));
-							insertClientToPeerList(foundClient);
+							struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
+							memcpy(newPeer, foundClient, sizeof(struct connectionInfo));
+							send_data_via_socket(serverAddress, serverPort, buf, packetsize, &newPeer->sockfd);
+							insertClientToPeerList(newPeer);
 						}
 						return;
 				break;
