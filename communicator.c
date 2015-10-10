@@ -240,7 +240,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 {
 
 	int commandTemp, i=0, packetsize = 0, numbytes;
-	char *saddress, sport[50];
+	char *saddress, sport[50], *fqdn = NULL;
 	unsigned char buff[256], buff1[256];
 	char caddress[100], pno[10], cfqdn[100];
 	fd_set read_fds;
@@ -271,7 +271,8 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				usleep(1000);
 			}
 			unpack(buf, "h100s", &commandTemp, sport);
-			char *fqdn = getfqdnbyip(saddress, &sport[0]);
+			fqdn = malloc(100*sizeof(char));
+			strcpy(fqdn, getfqdnbyip(saddress, &sport[0]));
 			struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
 			strcpy(newClient->clientAddress, saddress);
 			newClient->sockfd = sfd;
@@ -280,7 +281,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			newClient->next = NULL;
 			printf("fqdn:%s\n",newClient->fqdn);
 			insertClientToServerList(newClient);
-
+			free(fqdn);
 			packetsize = 0;
 			packetsize += pack(buff1+packetsize, "h", ADD_TO_SERVER_IP_LIST);
 			packetsize += pack(buff1+packetsize, "s", newClient->clientAddress);
@@ -297,6 +298,26 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				}
 			}
 			break;
+
+		case CONNECT:
+			printf("peer is connecting\n");
+			read_fds = master;
+			saddress = getipbyfd(sfd);
+
+			unpack(buf, "h100s", &commandTemp, sport);
+			fqdn = malloc(100*sizeof(char));
+			strcpy(fqdn, getfqdnbyip(saddress, &sport[0]));
+
+			struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
+			strcpy(newPeer->clientAddress,saddress);
+			strcpy(newPeer->portNo, sport);
+			strcpy(newPeer->fqdn, fqdn);
+			newPeer->next = NULL;
+			insertClientToPeerList(newPeer);
+			free(fqdn);
+
+		break;
+
 		case ADD_TO_SERVER_IP_LIST:
 			printf("add to server ip list\n");
 			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
@@ -423,11 +444,11 @@ void executeCommand(char *userInput)
 						printf("Server address:%s\n", serverAddress);
 						printf("Server port: %s\n", serverPort);
 						send_data_via_socket(serverAddress, serverPort, buf, packetsize);
-						//					struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
-						//					strcpy(conObj->clientAddress, serverAddress);
-						//					strcpy(conObj->portNo, serverPort);
-						//					strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
-						//					insertClientToServerList(conObj);
+						struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
+						strcpy(conObj->clientAddress, serverAddress);
+						strcpy(conObj->portNo, serverPort);
+						strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
+						insertClientToPeerList(conObj);
 						is_registered = 1;}
 					else {
 						printf("Already Registered\n");
@@ -435,7 +456,30 @@ void executeCommand(char *userInput)
 					return;
 					break;
 				case CONNECT:
-					break;
+						memset(buf,0,256);
+						packetsize = 0;
+					  packetsize += pack(buf+packetsize, "h", currentCommand);
+						packetsize += pack(buf+packetsize, "s", port);
+						char *serverAddress = malloc(100*sizeof(char));
+						strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
+						char *serverPort = malloc(50*sizeof(char));
+						strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
+						printf("Server address:%s\n", serverAddress);
+						printf("Server port: %s\n", serverPort);
+						struct connectionInfo *foundClient = getClientFromPeerListWithIpPort(serverAddress, serverPort);
+						if(foundClient == NULL)
+						{
+							printf("Hold on, this client is not registered with the server\n");
+						}
+						else
+						{
+							send_data_via_socket(serverAddress, serverPort, buf, packetsize);
+							//struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
+							//memcpy(newPeer, foundClient, sizeof(foundClient));
+							insertClientToPeerList(foundClient);
+						}
+						return;
+				break;
 				case LIST:
 					doList();
 					return;

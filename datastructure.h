@@ -22,3 +22,4 @@ void insertClientToPeerList(struct connectionInfo*);
 void removeClientFromPeerList(int);
 struct connectionInfo* getClientFromPeerList(int);
 void removeClientFromPeerListWithIpPort(char*,char*);
+struct connectionInfo* getClientFromPeerListWithIpPort(char*,char*);
