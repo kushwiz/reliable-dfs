@@ -7,10 +7,10 @@ struct connectionInfo
 	struct connectionInfo *next;
 };
 
-extern struct connectionInfo *startPtr;
-extern struct connectionInfo *endPtr;
+extern struct connectionInfo *serverliststartPtr;
+extern struct connectionInfo *serverlistendPtr;
 
-void insertClientToMasterList(struct connectionInfo*);
-void removeClientFromMasterList(int);
-struct connectionInfo* getClientFromMasterList(int);
-void removeClientFromMasterListWithIpPort(char*,char*);
+void insertClientToServerList(struct connectionInfo*);
+void removeClientFromServerList(int);
+struct connectionInfo* getClientFromServerList(int);
+void removeClientFromServerListWithIpPort(char*,char*);

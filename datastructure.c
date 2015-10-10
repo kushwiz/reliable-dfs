@@ -3,31 +3,31 @@
 #include<stdlib.h>
 #include<string.h>
 
-struct connectionInfo *startPtr=NULL;
+struct connectionInfo *serverliststartPtr=NULL;
 
-struct connectionInfo *endPtr=NULL;
+struct connectionInfo *serverlistendPtr=NULL;
 
-void insertClientToMasterList(struct connectionInfo *newClient)
+void insertClientToServerList(struct connectionInfo *newClient)
 {
-	if(startPtr==NULL)
+	if(serverliststartPtr==NULL)
 	{
-		startPtr = newClient;
-		endPtr = newClient;
-		endPtr->next=NULL;
+		serverliststartPtr = newClient;
+		serverlistendPtr = newClient;
+		serverlistendPtr->next=NULL;
 	}
 	else
 	{
-		endPtr->next = newClient;
-		endPtr = newClient;
-		endPtr->next = NULL;
+		serverlistendPtr->next = newClient;
+		serverlistendPtr = newClient;
+		serverlistendPtr->next = NULL;
 	}
 }
 
 
-void removeClientFromMasterList(int sockfd)
+void removeClientFromServerList(int sockfd)
 {
 	struct connectionInfo *itr;
-	itr = startPtr;
+	itr = serverliststartPtr;
 	struct connectionInfo *itrPrev;
 	itrPrev = itr;
 
@@ -35,10 +35,10 @@ void removeClientFromMasterList(int sockfd)
 	{
 		if(itr->sockfd == sockfd)
 		{
-			if(startPtr == itr)
+			if(serverliststartPtr == itr)
 			{
-				startPtr = itr->next;
-				itrPrev = startPtr;
+				serverliststartPtr = itr->next;
+				itrPrev = serverliststartPtr;
 				free(itr);
 			}
 			else
@@ -57,10 +57,10 @@ void removeClientFromMasterList(int sockfd)
 }
 
 
-struct connectionInfo* getClientFromMasterList(int sockfd)
+struct connectionInfo* getClientFromServerList(int sockfd)
 {
 	struct connectionInfo *itr;
-	itr = startPtr;
+	itr = serverliststartPtr;
 	while(itr!=NULL)
 	{
 		if(itr->sockfd==sockfd)
@@ -73,12 +73,12 @@ struct connectionInfo* getClientFromMasterList(int sockfd)
 	return NULL;
 }
 
-void removeClientFromMasterListWithIpPort(char *ip, char *portNo)
+void removeClientFromServerListWithIpPort(char *ip, char *portNo)
 {
 	struct connectionInfo *itr;
 	struct connectionInfo *itrPrev;
 
-	itr = startPtr;
+	itr = serverliststartPtr;
 	itrPrev = itr;
 
 	while(itr!=NULL)

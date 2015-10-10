@@ -101,7 +101,7 @@ int setup_server_socket(char *portNo)
 		strcpy(newClient->portNo, portNo);
 		newClient->sockfd = listener;
 		newClient->next = NULL;
-		insertClientToMasterList(newClient);
+		insertClientToServerList(newClient);
 	}
 
 	server_socket_runner();
@@ -168,7 +168,7 @@ void server_socket_runner()
 					//strcpy(newClient->clientAddress, s);
 					//newClient->sockfd = new_fd;
 					//newClient->next = NULL;
-					//insertClientToMasterList(newClient);
+					//insertClientToServerList(newClient);
 
 				} else {
 					// handle data from a client
@@ -185,7 +185,7 @@ void server_socket_runner()
 						FD_CLR(i, &master); // remove from master set
 						if(isClient == 0)
 						{
-							struct connectionInfo *leavingClient = getClientFromMasterList(i);
+							struct connectionInfo *leavingClient = getClientFromServerList(i);
 							unsigned char innerbuf[256];
 							int innerpacketsize = 0;
 							innerpacketsize += pack(innerbuf+innerpacketsize, "h", REMOVE_FROM_SERVER_IP_LIST);
@@ -197,7 +197,7 @@ void server_socket_runner()
 									send(k, &innerbuf, innerpacketsize,0);
 								}
 							}
-							removeClientFromMasterList(i);
+							removeClientFromServerList(i);
 						}
 					} else {
 						int cmdl;
@@ -247,7 +247,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			read_fds = master;
 			saddress = getipbyfd(sfd);
 			printf("new client registering:%s\n", saddress);
-			struct connectionInfo *itr = startPtr;
+			struct connectionInfo *itr = serverliststartPtr;
 			while(itr!=NULL) {
 				memset(buff,0,256);
 				packetsize=0;
@@ -276,7 +276,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			strcpy(newClient->fqdn, fqdn);
 			newClient->next = NULL;
 			printf("fqdn:%s\n",newClient->fqdn);
-			insertClientToMasterList(newClient);
+			insertClientToServerList(newClient);
 
 			packetsize = 0;
 			packetsize += pack(buff1+packetsize, "h", ADD_TO_SERVER_IP_LIST);
@@ -303,14 +303,14 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			strcpy(newClient1->portNo, pno);
 			strcpy(newClient1->fqdn, cfqdn);
 			newClient1->next = NULL;
-			insertClientToMasterList(newClient1);
+			insertClientToServerList(newClient1);
 			break;
 
 		case REMOVE_FROM_SERVER_IP_LIST:
 			printf("remove from server ip list\n");
 			unpack(buf, "h100s10s", &commandTemp, caddress,pno);
 			printf("caddress:%s, pno:%s\n",caddress,pno);
-			removeClientFromMasterListWithIpPort(caddress, pno);
+			removeClientFromServerListWithIpPort(caddress, pno);
 			break;
 
 	}
@@ -424,7 +424,7 @@ void executeCommand(char *userInput)
 						//					strcpy(conObj->clientAddress, serverAddress);
 						//					strcpy(conObj->portNo, serverPort);
 						//					strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
-						//					insertClientToMasterList(conObj);
+						//					insertClientToServerList(conObj);
 						is_registered = 1;}
 					else {
 						printf("Already Registered\n");
