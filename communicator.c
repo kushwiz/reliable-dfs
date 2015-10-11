@@ -371,6 +371,15 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			fclose(fp);
 			break;
 
+		case PUT_SATNEY:
+			printf("PUT REQUEST\n");
+			memset(filebuffer, 0, FILEBUFFSIZE);
+			unpack(buf, "h100s256sh", &commandTemp, strgetfilename, filebuffer, &filebytesread);	
+			fp = fopen("putrecsample.txt", "ab");
+			fwrite(filebuffer, 1, filebytesread, fp);
+			fclose(fp);	
+			break;
+
 		case ADD_TO_SERVER_IP_LIST:
 			printf("add to server ip list\n");
 			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
@@ -460,13 +469,15 @@ void close_all_server_connections()
 void executeCommand(char *userInput)
 {
 	unsigned char buf[BUFFSIZE];
-	int packetsize, numbytes;
-	int i;
+	int commandTemp, i=0, packetsize = 0, numbytes, numpackets, filelen, filebytesread;
 	regmatch_t rm[3];
 	struct connectionInfo *returnedPeer;
 	char *strclientId = malloc(10*sizeof(char));
 	char *strgetfilename = malloc(100*sizeof(char));
+	char filebuffer[FILEBUFFSIZE];
 	struct connectionInfo *foundClient = NULL; 
+	FILE *fp;
+
 	for(i=0; i<CMDCOUNT; i++)
 	{
 		regex_t re;
@@ -602,6 +613,55 @@ void executeCommand(char *userInput)
 					return;
 					break;
 				case PUT:
+					printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+					sprintf(strclientId,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+					printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+					sprintf(strgetfilename, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+					memset(buf,0,BUFFSIZE);
+					packetsize = 0;
+					packetsize += pack(buf+packetsize, "h", currentCommand);
+					packetsize += pack(buf+packetsize, "s", strgetfilename);
+					foundClient = getClientFromPeerListWithId(atoi(strclientId));
+					if(foundClient == NULL)
+					{
+						printf("Hold on, this client is not registered with the server\n");
+					}
+					else
+					{
+						printf("filename to send for PUT%s\n", strgetfilename);
+						fp = fopen(strgetfilename,"rb");
+						fseek(fp, 0, SEEK_END);
+						filelen = ftell(fp);
+						rewind(fp);
+						printf("filelen:%d\n",filelen);
+						numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
+						printf("num packets:%d\n",numpackets);
+						for(i=0;i<numpackets;i++)
+						{
+							memset(filebuffer,0,FILEBUFFSIZE);
+							memset(buf, 0, BUFFSIZE);
+							filebytesread = fread(&filebuffer, 1, FILEBUFFSIZE, fp);
+							packetsize=0;
+							packetsize+= pack(buf+packetsize, "h", PUT_SATNEY);
+							packetsize+= pack(buf+packetsize, "s",strgetfilename);
+							packetsize+= pack(buf+packetsize, "s",filebuffer);
+							packetsize+= pack(buf+packetsize, "h",filebytesread);
+							if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
+							{
+								perror("send");
+								exit(1);
+							}
+							else
+							{
+								printf("PUT: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,foundClient->sockfd);
+							}
+
+						}
+						fclose(fp);
+					}	
+					printf("client id: %d\n", idofclient);
+
+					return;
 					break;
 				case SYNC:
 					printf("sync\n");
