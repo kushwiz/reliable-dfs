@@ -480,7 +480,7 @@ void executeCommand(char *userInput)
 	for(i=0; i<CMDCOUNT; i++)
 	{
 		regex_t re;
-		if (regcomp(&re, commandPatterns[i], REG_EXTENDED) != 0)
+		if (regcomp(&re, commandPatterns[i], REG_EXTENDED | REG_ICASE) != 0)
 		{
 			fprintf(stderr, "Failed to compile regex '%s'\n", commandPatterns[i]);
 		}
