@@ -103,8 +103,8 @@ int setup_server_socket(char *portNo)
 		newClient->sockfd = listener;
 		newClient->next = NULL;
 		insertClientToServerList(newClient);
-			printf("fqdn:%s\n",newClient->fqdn);
-	printf("fqdn:%s\n",serverliststartPtr->fqdn);
+		printf("fqdn:%s\n",newClient->fqdn);
+		printf("fqdn:%s\n",serverliststartPtr->fqdn);
 	}
 
 	server_socket_runner();
@@ -118,7 +118,7 @@ void server_socket_runner()
 	socklen_t sin_size;
 	char s[INET6_ADDRSTRLEN];
 	fd_set read_fds;
-	unsigned char buf[256];    // buffer for client data
+	unsigned char buf[BUFFSIZE];    // buffer for client data
 	char userInput[500];
 	int nbytes;
 	fd_set slave_read_fds;
@@ -158,7 +158,7 @@ void server_socket_runner()
 					} else {
 						FD_SET(new_fd, &master);
 						if(fdmax<new_fd){
-						fdmax = new_fd;
+							fdmax = new_fd;
 						}
 					}
 					inet_ntop(their_addr.ss_family,
@@ -189,7 +189,7 @@ void server_socket_runner()
 						if(isClient == 0)
 						{
 							struct connectionInfo *leavingClient = getClientFromServerList(i);
-							unsigned char innerbuf[256];
+							unsigned char innerbuf[BUFFSIZE];
 							int innerpacketsize = 0;
 							innerpacketsize += pack(innerbuf+innerpacketsize, "h", REMOVE_FROM_SERVER_IP_LIST);
 							innerpacketsize += pack(innerbuf+innerpacketsize, "s", leavingClient->clientAddress);
@@ -209,32 +209,33 @@ void server_socket_runner()
 					} else {
 						int cmdl;
 						unpack(buf, "h", &cmdl);
+						printf("recd some data cmd:%d\n",cmdl);
 						process_socket_actions(cmdl, buf, i);
 					} // send
 				} // not a listener
 
 			} // fd_isset
-		//	else if(FD_ISSET(i, &slave_read_fds)) {
-		//		printf("clientrun_fd: %d\n",i);
-		//		// handle data from a client
-		//		if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
-		//			// got error or connection closed by client
-		//			if (nbytes == 0) {
-		//				// connection closed
-		//				printf("recvclient: socket %d hung up\n", i);
-		//			} else {
-		//				perror("recv");
-		//			}
-		//			close(i); // bye!
-		//			//removeClientFromList(i);
-		//			FD_CLR(i, &slave); // remove from master set
-		//		} else {
-		//			int cmdl;
-		//			unpack(buf, "h", &cmdl);
-		//			process_socket_actions(cmdl, buf, i);
-		//		} // send
+			//	else if(FD_ISSET(i, &slave_read_fds)) {
+			//		printf("clientrun_fd: %d\n",i);
+			//		// handle data from a client
+			//		if ((nbytes = recv(i, buf, sizeof buf, 0)) <= 0) {
+			//			// got error or connection closed by client
+			//			if (nbytes == 0) {
+			//				// connection closed
+			//				printf("recvclient: socket %d hung up\n", i);
+			//			} else {
+			//				perror("recv");
+			//			}
+			//			close(i); // bye!
+			//			//removeClientFromList(i);
+			//			FD_CLR(i, &slave); // remove from master set
+			//		} else {
+			//			int cmdl;
+			//			unpack(buf, "h", &cmdl);
+			//			process_socket_actions(cmdl, buf, i);
+			//		} // send
 
-		//	}
+			//	}
 
 		} // fdmax loop
 	} // infinite loop
@@ -242,12 +243,13 @@ void server_socket_runner()
 
 void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 {
-
-	int commandTemp, i=0, packetsize = 0, numbytes;
+	int commandTemp, i=0, packetsize = 0, numbytes, numpackets, filelen, filebytesread;
 	char *saddress, sport[50], *fqdn = NULL;
-	unsigned char buff[256], buff1[256];
-	char caddress[100], pno[10], cfqdn[100];
+	unsigned char buff[BUFFSIZE], buff1[BUFFSIZE];
+	char filebuffer[FILEBUFFSIZE];
+	char caddress[100], pno[10], cfqdn[100], strgetfilename[100];
 	fd_set read_fds;
+	FILE *fp;
 	switch(cmdl)
 	{
 		case REGISTER:
@@ -256,7 +258,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			printf("new client registering:%s\n", saddress);
 			struct connectionInfo *itr = serverliststartPtr;
 			while(itr!=NULL) {
-				memset(buff,0,256);
+				memset(buff,0,BUFFSIZE);
 				packetsize=0;
 				packetsize += pack(buff+packetsize, "h", ADD_TO_SERVER_IP_LIST);
 				packetsize += pack(buff+packetsize, "s", itr->clientAddress);
@@ -321,7 +323,53 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			insertClientToPeerList(newPeer);
 			free(fqdn);
 
-		break;
+			break;
+
+		case GET:
+			printf("GET requested\n");
+			unpack(buf, "h100s", &commandTemp, strgetfilename);
+			printf("filename to send for GET:%s\n", strgetfilename);
+			fp = fopen(strgetfilename,"rb");
+			fseek(fp, 0, SEEK_END);
+			filelen = ftell(fp);
+			rewind(fp);
+			printf("filelen:%d\n",filelen);
+			numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
+			printf("num packets:%d\n",numpackets);
+			for(i=0;i<numpackets;i++)
+			{
+				memset(filebuffer,0,FILEBUFFSIZE);
+				memset(buff, 0, BUFFSIZE);
+				filebytesread = fread(&filebuffer, 1, FILEBUFFSIZE, fp);
+				packetsize=0;
+				packetsize+= pack(buff+packetsize, "h", GET_REPLY);
+				packetsize+= pack(buff+packetsize, "s",strgetfilename);
+				packetsize+= pack(buff+packetsize, "s",filebuffer);
+				packetsize+= pack(buff+packetsize, "h",filebytesread);
+				if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
+				{
+					perror("send");
+					exit(1);
+				}
+				else
+				{
+					printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+				}
+
+			}
+			fclose(fp);
+
+			break;
+
+		case GET_REPLY:
+			printf("GET REPLY\n");
+			memset(filebuffer, 0, FILEBUFFSIZE);
+			unpack(buf, "h100s256sh", &commandTemp, strgetfilename, filebuffer, &filebytesread);
+			fp = fopen("recsample.txt","ab");
+			printf("size of filebuffer:%lu\n",sizeof(filebuffer));
+			fwrite(filebuffer, 1, filebytesread, fp);
+			fclose(fp);
+			break;
 
 		case ADD_TO_SERVER_IP_LIST:
 			printf("add to server ip list\n");
@@ -341,7 +389,6 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			printf("caddress:%s, pno:%s\n",caddress,pno);
 			removeClientFromServerListWithIpPort(caddress, pno);
 			break;
-
 	}
 }
 
@@ -412,11 +459,14 @@ void close_all_server_connections()
 
 void executeCommand(char *userInput)
 {
-	unsigned char buf[256];
-	int packetsize;
+	unsigned char buf[BUFFSIZE];
+	int packetsize, numbytes;
 	int i;
 	regmatch_t rm[3];
 	struct connectionInfo *returnedPeer;
+	char *strclientId = malloc(10*sizeof(char));
+	char *strgetfilename = malloc(100*sizeof(char));
+	struct connectionInfo *foundClient = NULL; 
 	for(i=0; i<CMDCOUNT; i++)
 	{
 		regex_t re;
@@ -468,37 +518,37 @@ void executeCommand(char *userInput)
 					return;
 					break;
 				case CONNECT:
-						memset(buf,0,256);
-						packetsize = 0;
-					  packetsize += pack(buf+packetsize, "h", currentCommand);
-						packetsize += pack(buf+packetsize, "s", port);
-						char *serverAddress = malloc(100*sizeof(char));
-						//strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
-						char *serverPort = malloc(50*sizeof(char));
-						//strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
-						printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
-						sprintf(serverAddress,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
-						printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
-						sprintf(serverPort, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+					memset(buf,0,BUFFSIZE);
+					packetsize = 0;
+					packetsize += pack(buf+packetsize, "h", currentCommand);
+					packetsize += pack(buf+packetsize, "s", port);
+					char *serverAddress = malloc(100*sizeof(char));
+					//strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
+					char *serverPort = malloc(50*sizeof(char));
+					//strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
+					printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+					sprintf(serverAddress,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+					printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+					sprintf(serverPort, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
 
-						printf("Server address:%s\n", serverAddress);
-						printf("Server port: %s\n", serverPort);
-						struct connectionInfo *foundClient = getClientFromPeerListWithIpPort(serverAddress, serverPort);
-						if(foundClient == NULL)
-						{
-							printf("Hold on, this client is not registered with the server\n");
-						}
-						else
-						{
-							struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
-							strcpy(newPeer->clientAddress, foundClient->clientAddress);
-							strcpy(newPeer->fqdn, foundClient->fqdn);
-							strcpy(newPeer->portNo, foundClient->portNo);
-							send_data_via_socket(serverAddress, serverPort, buf, packetsize, &newPeer->sockfd);
-							insertClientToPeerList(newPeer);
-						}
-						return;
-				break;
+					printf("Server address:%s\n", serverAddress);
+					printf("Server port: %s\n", serverPort);
+					foundClient = getClientFromPeerListWithIpPort(serverAddress, serverPort);
+					if(foundClient == NULL)
+					{
+						printf("Hold on, this client is not registered with the server\n");
+					}
+					else
+					{
+						struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
+						strcpy(newPeer->clientAddress, foundClient->clientAddress);
+						strcpy(newPeer->fqdn, foundClient->fqdn);
+						strcpy(newPeer->portNo, foundClient->portNo);
+						send_data_via_socket(serverAddress, serverPort, buf, packetsize, &newPeer->sockfd);
+						insertClientToPeerList(newPeer);
+					}
+					return;
+					break;
 				case LIST:
 					doList();
 					return;
@@ -522,6 +572,34 @@ void executeCommand(char *userInput)
 					return;
 					break;
 				case GET:
+					printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+					sprintf(strclientId,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+					printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+					sprintf(strgetfilename, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+					memset(buf,0,BUFFSIZE);
+					packetsize = 0;
+					packetsize += pack(buf+packetsize, "h", currentCommand);
+					packetsize += pack(buf+packetsize, "s", strgetfilename);
+					int idofclient = atoi(strclientId);
+					foundClient = getClientFromPeerListWithId(idofclient);
+					if(foundClient == NULL)
+					{
+						printf("Hold on, this client is not registered with the server\n");
+					}
+					else
+					{
+						if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
+						{
+							perror("send");
+							exit(1);
+						}
+						else
+						{
+							printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,foundClient->sockfd);
+						}
+					}	
+					printf("client id: %d\n", idofclient);
+					return;
 					break;
 				case PUT:
 					break;
