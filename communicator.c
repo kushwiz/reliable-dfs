@@ -111,7 +111,6 @@ int setup_server_socket(char *portNo)
 		newClient->sockfd = listener;
 		newClient->next = NULL;
 		insertClientToServerList(newClient);
-		printf("fqdn:%s\n",newClient->fqdn);
 		printf("fqdn:%s\n",serverliststartPtr->fqdn);
 	}
 
@@ -148,7 +147,6 @@ void server_socket_runner()
 		//			perror("select2");
 		//			exit(4);
 		//		}
-		int max = MAX(fdmax, slave_fdmax);
 		for(i=0;i<=fdmax;i++){
 			if(FD_ISSET(i, &read_fds)) {
 				//	printf("fd:%d\n",i);
@@ -376,6 +374,10 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			fwrite(filebuffer, 1, filebytesread, fp);
 			fclose(fp);	
 			break;
+
+		case SYNC_PEERS:
+			syncallpeers();
+		break;
 
 		case ADD_TO_SERVER_IP_LIST:
 			printf("add to server ip list\n");
@@ -663,37 +665,15 @@ void executeCommand(char *userInput)
 					break;
 				case SYNC:
 					printf("sync\n");
-					struct connectionInfo *itr = peerliststartPtr;
-					i = 0;
-					while(itr!=NULL)
+					syncfileget();
+					if(isClient == 0)
 					{
-						printf("::%s::\n",itr->fqdn);
-						if( i >= 1)
-						{
-							strcpy(strgetfilename, itr->fqdn);
-							strcat(strgetfilename, ".txt");
-							printf("Start %s at \n",strgetfilename);
-							if(access(strgetfilename,F_OK)==-1)
-							{
-								printf("starting sync of %s\n",strgetfilename);
-								packetsize = 0;
-								memset(buf,0,BUFFSIZE);
-								packetsize += pack(buf+packetsize, "h", GET);
-								packetsize += pack(buf+packetsize, "s", strgetfilename);
-								if((numbytes=send(itr->sockfd, &buf, packetsize, 0)) == -1)
-								{
-									perror("send");
-									exit(1);
-								}
-								else
-								{
-									printf("SYNC GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,foundClient->sockfd);
-								}
-							}
-						}
-						itr = itr->next;
-						i++;
-					}	
+						syncallclients();
+					}
+ 					else
+					{
+						syncallpeers();
+					}
 					printf("GET SYNC done\n");
 					return;
 					break;
@@ -806,4 +786,100 @@ void sendfileget(char *strgetfilename, int sfd)
 
 	}
 	fclose(fp);
+}
+
+void syncfileget()
+{
+	struct connectionInfo *itr = peerliststartPtr;
+	int commandTemp, i=0, packetsize = 0, numbytes, numpackets, filelen, filebytesread;
+	unsigned char buf[BUFFSIZE];
+	char strgetfilename[100];
+	
+	while(itr!=NULL)
+	{
+		if( i >= 1)
+		{
+			strcpy(strgetfilename, itr->fqdn);
+			strcat(strgetfilename, ".txt");
+			printf("Start %s at \n",strgetfilename);
+			if(access(strgetfilename,F_OK)==-1)
+			{
+				printf("starting sync of %s\n",strgetfilename);
+				packetsize = 0;
+				memset(buf,0,BUFFSIZE);
+				packetsize += pack(buf+packetsize, "h", GET);
+				packetsize += pack(buf+packetsize, "s", strgetfilename);
+				if((numbytes=send(itr->sockfd, &buf, packetsize, 0)) == -1)
+				{
+					perror("send");
+					exit(1);
+				}
+				else
+				{
+					printf("SYNC GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,itr->sockfd);
+				}
+			}
+		}
+		itr = itr->next;
+		i++;
+	}	
+}
+
+void syncallpeers()
+{
+	struct connectionInfo *itr = peerliststartPtr;
+	unsigned char buf[BUFFSIZE];	
+	int i =0;
+	int packetsize;
+	int numbytes;
+	
+	while(itr!=NULL)
+	{
+		if(i >= 1)
+		{
+			packetsize = 0;
+			memset(buf, 0, BUFFSIZE);
+			packetsize+=pack(buf+packetsize, "h", SYNC_PEERS);	
+			if((numbytes = send(itr->sockfd, &buf, packetsize, 0)) == -1)
+			{
+				perror("send");
+			}
+			else
+			{
+				printf("SYNC PEERS: to:%d\n",itr->sockfd);
+			}
+		}
+		itr = itr->next;
+		i++;
+	}
+
+}
+
+void syncallclients()
+{
+	struct connectionInfo *itr = serverliststartPtr;
+	unsigned char buf[BUFFSIZE];	
+	int i =0;
+	int packetsize;
+	int numbytes;
+	
+	while(itr!=NULL)
+	{
+		if(i >= 1)
+		{
+			packetsize = 0;
+			memset(buf, 0, BUFFSIZE);
+			packetsize+=pack(buf+packetsize, "h", SYNC_PEERS);	
+			if((numbytes = send(itr->sockfd, &buf, packetsize, 0)) == -1)
+			{
+				perror("send");
+			}
+			else
+			{
+				printf("SYNC PEERS: to:%d\n",itr->sockfd);
+			}
+		}
+		itr = itr->next;
+		i++;
+	}
 }
