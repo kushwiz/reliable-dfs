@@ -31,6 +31,14 @@ void *get_in_addr(struct sockaddr *sa)
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+struct tm* getcurrenttime()
+{
+	time_t rawtime;
+	struct tm* timeinfo;
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+	return timeinfo;
+}
 
 int setup_server_socket(char *portNo)
 {
@@ -243,8 +251,8 @@ void server_socket_runner()
 
 void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 {
-	int commandTemp, i=0, packetsize = 0, numbytes, numpackets, filelen, filebytesread;
-	char *saddress, sport[50], *fqdn = NULL;
+	int commandTemp, i=0, packetsize = 0, numbytes, numpackets, filelen, filebytesread, packetseq;
+	char *saddress, sport[50], *fqdn = NULL, *dynamicunpacker=NULL;
 	unsigned char buff[BUFFSIZE], buff1[BUFFSIZE];
 	char filebuffer[FILEBUFFSIZE];
 	char caddress[100], pno[10], cfqdn[100], strgetfilename[100];
@@ -346,6 +354,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				packetsize+= pack(buff+packetsize, "s",strgetfilename);
 				packetsize+= pack(buff+packetsize, "s",filebuffer);
 				packetsize+= pack(buff+packetsize, "h",filebytesread);
+				packetsize+= pack(buff+packetsize, "h",i+1);
 				if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
 				{
 					perror("send");
@@ -364,8 +373,18 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 		case GET_REPLY:
 			printf("GET REPLY\n");
 			memset(filebuffer, 0, FILEBUFFSIZE);
-			unpack(buf, "h100s256sh", &commandTemp, strgetfilename, filebuffer, &filebytesread);
-			fp = fopen("recsample.txt","ab");
+			dynamicunpacker = malloc(50*sizeof(char));
+			sprintf(dynamicunpacker, "h100s%dsh", FILEBUFFSIZE);
+			unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq);
+			free(dynamicunpacker);
+			if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
+			{
+				fp = fopen("recsample.txt", "rb");
+			}
+			else
+			{ 
+				fp = fopen("recsample.txt", "ab");
+			}
 			printf("size of filebuffer:%lu\n",sizeof(filebuffer));
 			fwrite(filebuffer, 1, filebytesread, fp);
 			fclose(fp);
@@ -374,8 +393,17 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 		case PUT_SATNEY:
 			printf("PUT REQUEST\n");
 			memset(filebuffer, 0, FILEBUFFSIZE);
-			unpack(buf, "h100s256sh", &commandTemp, strgetfilename, filebuffer, &filebytesread);	
-			fp = fopen("putrecsample.txt", "ab");
+			dynamicunpacker = malloc(50*sizeof(char));
+			sprintf(dynamicunpacker, "h100s%dsh", FILEBUFFSIZE);
+			unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq);
+			if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
+			{
+				fp = fopen("putrecsample.txt", "rb");
+			}
+			else
+			{ 
+				fp = fopen("putrecsample.txt", "ab");
+			}
 			fwrite(filebuffer, 1, filebytesread, fp);
 			fclose(fp);	
 			break;
@@ -646,7 +674,8 @@ void executeCommand(char *userInput)
 							packetsize+= pack(buf+packetsize, "s",strgetfilename);
 							packetsize+= pack(buf+packetsize, "s",filebuffer);
 							packetsize+= pack(buf+packetsize, "h",filebytesread);
-							if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
+							packetsize+= pack(buf+packetsize, "h",i+1);
+						if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
 							{
 								perror("send");
 								exit(1);

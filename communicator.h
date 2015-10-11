@@ -12,6 +12,8 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include "datapacker.h"
+#include <time.h>
+
 #define BACKLOG_CONN 10
 #define FILEBUFFSIZE 256
 #define BUFFSIZE FILEBUFFSIZE+100
@@ -27,3 +29,5 @@ void process_socket_actions(int, unsigned char*, int);
 char* getipbyfd(int);
 char* getfqdnbyip(char*,char*);
 int hostname_to_ip(char*, char*);
+
+struct tm* getcurrenttime();
