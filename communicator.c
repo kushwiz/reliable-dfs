@@ -445,9 +445,13 @@ void executeCommand(char *userInput)
 						packetsize = pack(buf, "hs", currentCommand, port);
 						packi16(buf+2, packetsize);
 						char *serverAddress = malloc(100*sizeof(char));
-						strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
+						//strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
+						printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+						sprintf(serverAddress,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+						printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
 						char *serverPort = malloc(50*sizeof(char));
-						strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
+						sprintf(serverPort, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+						//strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
 						printf("Server address:%s\n", serverAddress);
 						printf("Server port: %s\n", serverPort);
 						struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
@@ -468,9 +472,14 @@ void executeCommand(char *userInput)
 					  packetsize += pack(buf+packetsize, "h", currentCommand);
 						packetsize += pack(buf+packetsize, "s", port);
 						char *serverAddress = malloc(100*sizeof(char));
-						strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
+						//strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
 						char *serverPort = malloc(50*sizeof(char));
-						strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
+						//strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
+						printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+						sprintf(serverAddress,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
+						printf("Text: <<%.*s>>\n", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+						sprintf(serverPort, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
+
 						printf("Server address:%s\n", serverAddress);
 						printf("Server port: %s\n", serverPort);
 						struct connectionInfo *foundClient = getClientFromPeerListWithIpPort(serverAddress, serverPort);
