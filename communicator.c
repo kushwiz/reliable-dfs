@@ -113,7 +113,11 @@ int setup_server_socket(char *portNo)
 		insertClientToServerList(newClient);
 		printf("fqdn:%s\n",serverliststartPtr->fqdn);
 	}
-
+	else
+	{
+		gethostname(&shostname[0], sizeof(shostname));
+		hostname_to_ip(&shostname[0], &sipaddr[0]);
+	}
 	server_socket_runner();
 	return 0;
 }
