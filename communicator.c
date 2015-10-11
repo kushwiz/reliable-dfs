@@ -352,7 +352,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			}
 			else
 			{ 
-				fp = fopen(strgetfilename "ab");
+				fp = fopen(strgetfilename, "ab");
 			}
 			printf("size of filebuffer:%lu\n",sizeof(filebuffer));
 			fwrite(filebuffer, 1, filebytesread, fp);
@@ -371,7 +371,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			}
 			else
 			{ 
-				fp = fopen(strgetfilename "ab");
+				fp = fopen(strgetfilename, "ab");
 			}
 			fwrite(filebuffer, 1, filebytesread, fp);
 			fclose(fp);	
