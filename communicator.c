@@ -442,8 +442,9 @@ void executeCommand(char *userInput)
 					return;
 				case REGISTER:
 					if(is_registered == 0) {
-						packetsize = pack(buf, "hs", currentCommand, port);
-						packi16(buf+2, packetsize);
+						packetsize = 0;
+						packetsize += pack(buf+packetsize, "h", currentCommand);
+						packetsize += pack(buf+packetsize, "s", port);
 						char *serverAddress = malloc(100*sizeof(char));
 						//strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
 						printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
@@ -545,7 +546,7 @@ char* getipbyfd(int fd)
 	struct sockaddr_in name;
 	socklen_t namelen = sizeof(name);
 
-	err = getsockname(fd, (struct sockaddr*) &name, &namelen);
+	err = getpeername(fd, (struct sockaddr*) &name, &namelen);
 	const char* p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
 
 	if(p != NULL)
