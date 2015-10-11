@@ -25,6 +25,7 @@ extern int isClient;
 
 void send_data_via_socket(char*, char*, unsigned char*, int, int*);
 void process_socket_actions(int, unsigned char*, int);
+void sendfileget(char*, int);
 
 char* getipbyfd(int);
 char* getfqdnbyip(char*,char*);

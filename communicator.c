@@ -330,44 +330,13 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			newPeer->next = NULL;
 			insertClientToPeerList(newPeer);
 			free(fqdn);
-
 			break;
 
 		case GET:
 			printf("GET requested\n");
 			unpack(buf, "h100s", &commandTemp, strgetfilename);
 			printf("filename to send for GET:%s\n", strgetfilename);
-			fp = fopen(strgetfilename,"rb");
-			fseek(fp, 0, SEEK_END);
-			filelen = ftell(fp);
-			rewind(fp);
-			printf("filelen:%d\n",filelen);
-			numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
-			printf("num packets:%d\n",numpackets);
-			for(i=0;i<numpackets;i++)
-			{
-				memset(filebuffer,0,FILEBUFFSIZE);
-				memset(buff, 0, BUFFSIZE);
-				filebytesread = fread(&filebuffer, 1, FILEBUFFSIZE, fp);
-				packetsize=0;
-				packetsize+= pack(buff+packetsize, "h", GET_REPLY);
-				packetsize+= pack(buff+packetsize, "s",strgetfilename);
-				packetsize+= pack(buff+packetsize, "s",filebuffer);
-				packetsize+= pack(buff+packetsize, "h",filebytesread);
-				packetsize+= pack(buff+packetsize, "h",i+1);
-				if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
-				{
-					perror("send");
-					exit(1);
-				}
-				else
-				{
-					printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
-				}
-
-			}
-			fclose(fp);
-
+			sendfileget(strgetfilename, sfd);
 			break;
 
 		case GET_REPLY:
@@ -675,7 +644,7 @@ void executeCommand(char *userInput)
 							packetsize+= pack(buf+packetsize, "s",filebuffer);
 							packetsize+= pack(buf+packetsize, "h",filebytesread);
 							packetsize+= pack(buf+packetsize, "h",i+1);
-						if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
+							if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
 							{
 								perror("send");
 								exit(1);
@@ -766,4 +735,43 @@ int hostname_to_ip(char *hostname , char *ip)
 
 	freeaddrinfo(servinfo); // all done with this structure
 	return 0;
+}
+
+void sendfileget(char *strgetfilename, int sfd)
+{
+	FILE *fp;
+	int numbytes, packetsize, filelen, filebytesread, numpackets, i;
+	char filebuffer[FILEBUFFSIZE]; 
+	unsigned char buff[BUFFSIZE];
+
+	fp = fopen(strgetfilename,"rb");
+	fseek(fp, 0, SEEK_END);
+	filelen = ftell(fp);
+	rewind(fp);
+	printf("filelen:%d\n",filelen);
+	numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
+	printf("num packets:%d\n",numpackets);
+	for(i=0;i<numpackets;i++)
+	{
+		memset(filebuffer,0,FILEBUFFSIZE);
+		memset(buff, 0, BUFFSIZE);
+		filebytesread = fread(&filebuffer, 1, FILEBUFFSIZE, fp);
+		packetsize=0;
+		packetsize+= pack(buff+packetsize, "h", GET_REPLY);
+		packetsize+= pack(buff+packetsize, "s",strgetfilename);
+		packetsize+= pack(buff+packetsize, "s",filebuffer);
+		packetsize+= pack(buff+packetsize, "h",filebytesread);
+		packetsize+= pack(buff+packetsize, "h",i+1);
+		if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
+		{
+			perror("send");
+			exit(1);
+		}
+		else
+		{
+			printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+		}
+
+	}
+	fclose(fp);
 }
