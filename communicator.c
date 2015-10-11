@@ -376,7 +376,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			break;
 
 		case SYNC_PEERS:
-			syncallpeers();
+			syncfileget();
 		break;
 
 		case ADD_TO_SERVER_IP_LIST:
