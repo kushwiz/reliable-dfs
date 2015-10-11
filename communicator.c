@@ -348,11 +348,11 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			free(dynamicunpacker);
 			if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
 			{
-				fp = fopen("recsample.txt", "rb");
+				fp = fopen(strgetfilename, "rb");
 			}
 			else
 			{ 
-				fp = fopen("recsample.txt", "ab");
+				fp = fopen(strgetfilename "ab");
 			}
 			printf("size of filebuffer:%lu\n",sizeof(filebuffer));
 			fwrite(filebuffer, 1, filebytesread, fp);
@@ -367,11 +367,11 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq);
 			if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
 			{
-				fp = fopen("putrecsample.txt", "rb");
+				fp = fopen(strgetfilename, "rb");
 			}
 			else
 			{ 
-				fp = fopen("putrecsample.txt", "ab");
+				fp = fopen(strgetfilename "ab");
 			}
 			fwrite(filebuffer, 1, filebytesread, fp);
 			fclose(fp);	
