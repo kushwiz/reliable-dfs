@@ -202,6 +202,10 @@ void server_socket_runner()
 							}
 							removeClientFromServerList(i);
 						}
+						else
+						{
+							removeClientFromPeerList(i);
+						}
 					} else {
 						int cmdl;
 						unpack(buf, "h", &cmdl);
@@ -412,6 +416,7 @@ void executeCommand(char *userInput)
 	int packetsize;
 	int i;
 	regmatch_t rm[3];
+	struct connectionInfo *returnedPeer;
 	for(i=0; i<CMDCOUNT; i++)
 	{
 		regex_t re;
@@ -476,7 +481,9 @@ void executeCommand(char *userInput)
 						else
 						{
 							struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
-							memcpy(newPeer, foundClient, sizeof(struct connectionInfo));
+							strcpy(newPeer->clientAddress, foundClient->clientAddress);
+							strcpy(newPeer->fqdn, foundClient->fqdn);
+							strcpy(newPeer->portNo, foundClient->portNo);
 							send_data_via_socket(serverAddress, serverPort, buf, packetsize, &newPeer->sockfd);
 							insertClientToPeerList(newPeer);
 						}
@@ -487,6 +494,18 @@ void executeCommand(char *userInput)
 					return;
 					break;
 				case TERMINATE:
+					returnedPeer = getClientFromPeerListWithId(2);
+					if(returnedPeer == NULL)
+					{
+						printf("Invalid connection id\n");
+					}
+					else
+					{
+						close(returnedPeer->sockfd);
+						FD_CLR(returnedPeer->sockfd, &master);
+						removeClientFromPeerList(returnedPeer->sockfd);
+					}
+					return;
 					break;
 				case QUIT:
 					close_all_server_connections();
@@ -497,6 +516,8 @@ void executeCommand(char *userInput)
 				case PUT:
 					break;
 				case SYNC:
+					printf("sync\n");
+					return;
 					break;
 			}
 			//			printf("Text: <<%.*s>>\n", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);

@@ -47,6 +47,13 @@ void removeClientFromServerList(int sockfd)
 				itrPrev = serverliststartPtr;
 				free(itr);
 			}
+			else if(serverlistendPtr == itr)
+			{
+				serverlistendPtr = itrPrev;
+				serverlistendPtr->next = NULL;
+				free(itr);
+			}
+
 			else
 			{
 				itrPrev->next = itr->next;
@@ -91,9 +98,25 @@ void removeClientFromServerListWithIpPort(char *ip, char *portNo)
 	{
 		if(strcmp(ip, itr->clientAddress)==0 && strcmp(portNo,itr->portNo)==0)
 		{
-			itrPrev->next = itr->next;
-			free(itr);
-			itr = itrPrev->next;
+			if(serverliststartPtr == itr)
+			{
+				serverliststartPtr = itr->next;
+				itrPrev = serverliststartPtr;
+				free(itr);
+			}
+			else if(serverlistendPtr == itr)
+			{
+				serverlistendPtr = itrPrev;
+				serverlistendPtr->next = NULL;
+				free(itr);
+			}
+			else
+			{
+				itrPrev->next = itr->next;
+				free(itr);
+				itr = itrPrev->next;
+			}
+			return;
 		}
 		else
 		{
@@ -138,6 +161,12 @@ void removeClientFromPeerList(int sockfd)
 				itrPrev = peerliststartPtr;
 				free(itr);
 			}
+			else if(peerlistendPtr == itr)
+			{
+				peerlistendPtr = itrPrev;
+				peerlistendPtr->next = NULL;
+				free(itr);
+			}
 			else
 			{
 				itrPrev->next = itr->next;
@@ -170,6 +199,26 @@ struct connectionInfo* getClientFromPeerList(int sockfd)
 	return NULL;
 }
 
+struct connectionInfo* getClientFromPeerListWithId(int id)
+{
+	struct connectionInfo *itr;
+	itr = peerliststartPtr;
+	int i = 1;
+	while(itr!=NULL)
+	{
+		if(i==id)
+		{
+			return itr;
+		}
+		else
+		{
+			itr = itr->next;
+			i+=1;
+		}
+	}
+	return NULL;
+}
+
 struct connectionInfo* getClientFromPeerListWithIpPort(char *ip, char *portNo)
 {
 	struct connectionInfo *itr;
@@ -198,9 +247,25 @@ void removeClientFromPeerListWithIpPort(char *ip, char *portNo)
 	{
 		if(strcmp(ip, itr->clientAddress)==0 && strcmp(portNo,itr->portNo)==0)
 		{
-			itrPrev->next = itr->next;
-			free(itr);
-			itr = itrPrev->next;
+			if(peerliststartPtr == itr)
+			{
+				peerliststartPtr = itr->next;
+				itrPrev = peerliststartPtr;
+				free(itr);
+			}
+			else if(peerlistendPtr == itr)
+			{
+				peerlistendPtr = itrPrev;
+				peerlistendPtr->next = NULL;
+				free(itr);
+			}
+			else
+			{
+				itrPrev->next = itr->next;
+				free(itr);
+				itr = itrPrev->next;
+			}
+			return;
 		}
 		else
 		{
