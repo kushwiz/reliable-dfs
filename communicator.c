@@ -471,7 +471,7 @@ void executeCommand(char *userInput)
 	struct connectionInfo *returnedPeer;
 	char *strclientId = malloc(10*sizeof(char));
 	char *strgetfilename = malloc(100*sizeof(char));
-	char filebuffer[FILEBUFFSIZE];
+	char filebuffer[FILEBUFFSIZE], cfqdn[100];
 	struct connectionInfo *foundClient = NULL; 
 	FILE *fp;
 
@@ -663,6 +663,38 @@ void executeCommand(char *userInput)
 					break;
 				case SYNC:
 					printf("sync\n");
+					struct connectionInfo *itr = peerliststartPtr;
+					i = 0;
+					while(itr!=NULL)
+					{
+						printf("::%s::\n",itr->fqdn);
+						if( i >= 1)
+						{
+							strcpy(strgetfilename, itr->fqdn);
+							strcat(strgetfilename, ".txt");
+							printf("Start %s at \n",strgetfilename);
+							if(access(strgetfilename,F_OK)==-1)
+							{
+								printf("starting sync of %s\n",strgetfilename);
+								packetsize = 0;
+								memset(buf,0,BUFFSIZE);
+								packetsize += pack(buf+packetsize, "h", GET);
+								packetsize += pack(buf+packetsize, "s", strgetfilename);
+								if((numbytes=send(itr->sockfd, &buf, packetsize, 0)) == -1)
+								{
+									perror("send");
+									exit(1);
+								}
+								else
+								{
+									printf("SYNC GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,foundClient->sockfd);
+								}
+							}
+						}
+						itr = itr->next;
+						i++;
+					}	
+					printf("GET SYNC done\n");
 					return;
 					break;
 			}
