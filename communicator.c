@@ -890,6 +890,7 @@ void sendfileget(char *strgetfilename, int sfd)
 			{
 				printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
 			}
+			usleep(300);
 		}
 		fclose(fp);
 	}
