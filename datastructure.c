@@ -274,3 +274,15 @@ void removeClientFromPeerListWithIpPort(char *ip, char *portNo)
 		}
 	}
 }
+
+int getPeerListSize()
+{
+	int i =0;
+	struct connectionInfo *itr = peerliststartPtr;
+	while(itr!=NULL)
+	{
+		i++;
+		itr = itr->next;
+	}
+	return i;
+}
