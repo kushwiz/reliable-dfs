@@ -214,7 +214,7 @@ void server_socket_runner()
 
 void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 {
-	int commandTemp, i=0, packetsize = 0, numbytes, filebytesread, packetseq;
+	int commandTemp, i=0, packetsize = 0, numbytes, filebytesread, packetseq, numpackets;
 	char *saddress, sport[50], *fqdn = NULL, *dynamicunpacker=NULL;
 	unsigned char buff[BUFFSIZE], buff1[BUFFSIZE];
 	char filebuffer[FILEBUFFSIZE];
@@ -357,7 +357,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			memset(filebuffer, 0, FILEBUFFSIZE);
 			dynamicunpacker = malloc(50*sizeof(char));
 			sprintf(dynamicunpacker, "h100s%dsh", FILEBUFFSIZE);
-			unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq);
+			unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq, &numpackets);
 			free(dynamicunpacker);
 			if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
 			{
@@ -369,6 +369,11 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			}
 			printf("size of filebuffer:%lu\n",sizeof(filebuffer));
 			fwrite(filebuffer, 1, filebytesread, fp);
+			if(numpackets == packetseq)
+			{
+				struct tm *t = getcurrenttime();
+				printf("End %s at %d:%d:%d\n",strgetfilename, t->tm_hour, t->tm_min, t->tm_sec);
+			}
 			fclose(fp);
 			break;
 
@@ -668,6 +673,8 @@ void executeCommand(char *userInput)
 						}
 						else
 						{
+							struct tm *t = getcurrenttime();
+							printf("Start %s at %d:%d:%d\n",strgetfilename, t->tm_hour, t->tm_min, t->tm_sec);
 							if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
 							{
 								perror("send");
@@ -873,6 +880,7 @@ void sendfileget(char *strgetfilename, int sfd)
 			packetsize+= pack(buff+packetsize, "s",filebuffer);
 			packetsize+= pack(buff+packetsize, "h",filebytesread);
 			packetsize+= pack(buff+packetsize, "h",i+1);
+			packetsize+= pack(buff+packetsize, "h", numpackets);
 			if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
 			{
 				perror("send");
@@ -900,14 +908,15 @@ void syncfileget()
 		{
 			strcpy(strgetfilename, itr->fqdn);
 			strcat(strgetfilename, ".txt");
-			printf("Start %s at \n",strgetfilename);
 			if(access(strgetfilename,F_OK)==-1)
 			{
-				printf("starting sync of %s\n",strgetfilename);
+				//printf("starting sync of %s\n",strgetfilename);
 				packetsize = 0;
 				memset(buf,0,BUFFSIZE);
 				packetsize += pack(buf+packetsize, "h", GET);
 				packetsize += pack(buf+packetsize, "s", strgetfilename);
+				struct tm	*t = getcurrenttime();
+				printf("Start %s at %d:%d:%d\n",strgetfilename, t->tm_hour, t->tm_min, t->tm_sec);
 				if((numbytes=send(itr->sockfd, &buf, packetsize, 0)) == -1)
 				{
 					perror("send");
