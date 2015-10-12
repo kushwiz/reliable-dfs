@@ -27,3 +27,5 @@ void executeCommand();
 void doCreator();
 
 void doList();
+
+void doHelp();

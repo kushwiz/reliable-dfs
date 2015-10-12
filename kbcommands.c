@@ -66,3 +66,18 @@ void doList()
   }
 
 }
+
+void doHelp()
+{
+	printf("HELP: Displays list of available commands\n");
+	printf("CREATOR: Displays author information\n");
+	printf("DISPLAY: Displays the IP and port of this process\n");
+	printf("REGISTER <server IP> <port>: Registers this client to the server\n");
+	printf("CONNECT <destination> <port>: Connects as a peer to the specified address\n");
+	printf("LIST: Displays a numbered list of all connected connections on this process\n");
+	printf("TERMINATE <id>: Terminates a connection from the available list of connections\n");
+	printf("QUIT: Closes all connections and terminates this process\n");
+	printf("GET <connection_id> <file>: Download the specified file from the host\n");
+	printf("PUT <connection_id> <file>: Uploads the specified file to the host\n");
+	printf("SYNC: Synchronizes host specific text files across its peers\n");
+}

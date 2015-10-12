@@ -99,7 +99,6 @@ int setup_server_socket(char *portNo)
 
 	if(isClient == 0)
 	{
-		printf("isCLient:%d\n",isClient);
 		gethostname(&shostname[0], sizeof(shostname));
 		struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
 		hostname_to_ip(&shostname[0], &sipaddr[0]);
@@ -109,7 +108,6 @@ int setup_server_socket(char *portNo)
 		newClient->sockfd = listener;
 		newClient->next = NULL;
 		insertClientToServerList(newClient);
-		printf("fqdn:%s\n",serverliststartPtr->fqdn);
 	}
 	else
 	{
@@ -430,6 +428,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			unpack(buf, "h100s10s", &commandTemp, caddress,pno);
 			printf("caddress:%s, pno:%s\n",caddress,pno);
 			removeClientFromServerListWithIpPort(caddress, pno);
+			removeClientFromPeerListWithIpPort(caddress, pno);
 			break;
 
 		case ERR_INVALID:
@@ -544,7 +543,7 @@ void executeCommand(char *userInput)
 			switch(i)
 			{
 				case HELP:
-					printf("DO HELP\n");
+					doHelp();
 					return;
 					break;
 				case CREATOR:
