@@ -202,7 +202,6 @@ void server_socket_runner()
 					} else {
 						int cmdl;
 						unpack(buf, "h", &cmdl);
-						printf("recd some data cmd:%d\n",cmdl);
 						process_socket_actions(cmdl, buf, i);
 					} // send
 				} // not a listener
@@ -353,7 +352,6 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			break;
 
 		case GET_REPLY:
-			printf("GET REPLY\n");
 			memset(filebuffer, 0, FILEBUFFSIZE);
 			dynamicunpacker = malloc(50*sizeof(char));
 			sprintf(dynamicunpacker, "h100s%dsh", FILEBUFFSIZE);
@@ -367,7 +365,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			{
 				fp = fopen(strgetfilename, "ab");
 			}
-			printf("size of filebuffer:%lu\n",sizeof(filebuffer));
+			printf("size of filebuffer:%lu ts:%d\n",sizeof(filebuffer), (int)time(NULL));
 			fwrite(filebuffer, 1, filebytesread, fp);
 			if(numpackets == packetseq)
 			{
