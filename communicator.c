@@ -250,7 +250,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				}
 				unpack(buf, "h100s", &commandTemp, sport);
 				fqdn = malloc(100*sizeof(char));
-				strcpy(fqdn, getfqdnbyip(saddress, &sport[0]));
+				strcpy(fqdn, saddress);
 				struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
 				strcpy(newClient->clientAddress, saddress);
 				newClient->sockfd = sfd;
@@ -303,7 +303,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 
 					unpack(buf, "h100s", &commandTemp, sport);
 					fqdn = malloc(100*sizeof(char));
-					strcpy(fqdn, getfqdnbyip(saddress, &sport[0]));
+					strcpy(fqdn, saddress);
 
 					struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
 					strcpy(newPeer->clientAddress,saddress);
@@ -573,7 +573,7 @@ void executeCommand(char *userInput)
 							send_data_via_socket(serverAddress, serverPort, buf, packetsize, &conObj->sockfd);
 							strcpy(conObj->clientAddress, serverAddress);
 							strcpy(conObj->portNo, serverPort);
-							strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
+							strcpy(conObj->fqdn, serverAddress);
 							insertClientToPeerList(conObj);
 							is_registered = 1;}
 						else {
