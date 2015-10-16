@@ -931,9 +931,9 @@ void sendfileget(char *strgetfilename, int sfd)
 		fseek(fp, 0, SEEK_END);
 		filelen = ftell(fp);
 		rewind(fp);
-		printf("filelen:%d\n",filelen);
+		//printf("filelen:%d\n",filelen);
 		numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
-		printf("num packets:%d\n",numpackets);
+		//printf("num packets:%d\n",numpackets);
 		for(i=0;i<numpackets;i++)
 		{
 			memset(filebuffer,0,FILEBUFFSIZE);
