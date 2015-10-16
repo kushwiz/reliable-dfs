@@ -248,6 +248,22 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 					itr = itr->next;
 					usleep(1000);
 				}
+				packetsize = 0;
+				memset(buff, 0, BUFFSIZE);
+				packetsize += pack(buff+packetsize, "h", ADD_TO_PEER_IP_LIST);
+				packetsize += pack(buff+packetsize, "s", serverliststartPtr->clientAddress);
+				packetsize += pack(buff+packetsize, "s", serverliststartPtr->portNo);
+				packetsize += pack(buff+packetsize, "s", serverliststartPtr->fqdn);
+				if((numbytes=send(sfd, &buff, packetsize, 0)) == -1)
+				{
+					perror("send");
+					exit(1);
+				}
+				else
+				{
+					printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+				}
+				usleep(500);
 				unpack(buf, "h100s", &commandTemp, sport);
 				fqdn = malloc(100*sizeof(char));
 				strcpy(fqdn, getfqdnbyip(saddress, sport));
@@ -415,6 +431,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			break;
 
 		case ADD_TO_SERVER_IP_LIST:
+			is_registered = 1;
 			printf("add to server ip list\n");
 			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
 			printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
@@ -424,6 +441,19 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			strcpy(newClient1->fqdn, cfqdn);
 			newClient1->next = NULL;
 			insertClientToServerList(newClient1);
+			break;
+
+		case ADD_TO_PEER_IP_LIST:
+			is_registered = 1;
+			printf("add to peer ip list\n");
+			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
+			printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
+			struct connectionInfo *newClient2 = malloc(sizeof(struct connectionInfo));
+			strcpy(newClient2->clientAddress, caddress);
+			strcpy(newClient2->portNo, pno);
+			strcpy(newClient2->fqdn, cfqdn);
+			newClient2->next = NULL;
+			insertClientToPeerList(newClient2);
 			break;
 
 		case REMOVE_FROM_SERVER_IP_LIST:
@@ -573,11 +603,10 @@ void executeCommand(char *userInput)
 							int status = send_data_via_socket(serverAddress, serverPort, buf, packetsize, &conObj->sockfd);
 							if(status == 0)
 							{
-								strcpy(conObj->clientAddress, serverAddress);
-								strcpy(conObj->portNo, serverPort);
-								strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
-								insertClientToPeerList(conObj);
-								is_registered = 1;
+								//	strcpy(conObj->clientAddress, serverAddress);
+								//	strcpy(conObj->portNo, serverPort);
+								//	strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
+								//	insertClientToPeerList(conObj);
 							}
 							else
 							{
@@ -786,14 +815,13 @@ void executeCommand(char *userInput)
 
 char* getipbyfd(int fd)
 {
-	int err;
 	char *buffer;
 	buffer = malloc(100*sizeof(char));
 
 	struct sockaddr_in name;
 	socklen_t namelen = sizeof(name);
 
-	err = getpeername(fd, (struct sockaddr*) &name, &namelen);
+	getpeername(fd, (struct sockaddr*) &name, &namelen);
 	const char* p = inet_ntop(AF_INET, &name.sin_addr, buffer, 100);
 
 	if(p != NULL)
