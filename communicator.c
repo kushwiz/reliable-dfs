@@ -265,9 +265,8 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 					//printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
 				}
 				usleep(500);
-				unpack(buf, "h100s", &commandTemp, sport);
 				fqdn = malloc(100*sizeof(char));
-				strcpy(fqdn, getfqdnbyip(saddress, sport));
+				unpack(buf, "h100s100s", &commandTemp, sport, fqdn);
 				struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
 				strcpy(newClient->clientAddress, saddress);
 				newClient->sockfd = sfd;
@@ -615,6 +614,7 @@ void executeCommand(char *userInput)
 							packetsize = 0;
 							packetsize += pack(buf+packetsize, "h", currentCommand);
 							packetsize += pack(buf+packetsize, "s", port);
+							packetsize += pack(buf+packetsize, "s", shostname);
 							char *serverAddress = malloc(100*sizeof(char));
 							//strncpy(serverAddress, userInput + rm[1].rm_so, (int)(rm[1].rm_eo - rm[1].rm_so));
 							sprintf(serverAddress,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
