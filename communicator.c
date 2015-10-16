@@ -250,7 +250,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				}
 				unpack(buf, "h100s", &commandTemp, sport);
 				fqdn = malloc(100*sizeof(char));
-				strcpy(fqdn, saddress);
+				strcpy(fqdn, getfqdnbyip(saddress, sport));
 				struct connectionInfo *newClient = malloc(sizeof(struct connectionInfo));
 				strcpy(newClient->clientAddress, saddress);
 				newClient->sockfd = sfd;
@@ -303,7 +303,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 
 					unpack(buf, "h100s", &commandTemp, sport);
 					fqdn = malloc(100*sizeof(char));
-					strcpy(fqdn, saddress);
+					strcpy(fqdn, getfqdnbyip(saddress, sport));
 
 					struct connectionInfo *newPeer = malloc(sizeof(struct connectionInfo));
 					strcpy(newPeer->clientAddress,saddress);
@@ -456,7 +456,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 }
 
 
-void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data, int data_size, int *sfd)
+int send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data, int data_size, int *sfd)
 {
 	int  senderfd, numbytes;
 	struct addrinfo hints, *servinfo, *p;
@@ -469,7 +469,7 @@ void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data
 
 	if ((rv = getaddrinfo(serverAddress, portNo, &hints, &servinfo)) != 0) {
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return;
+		return -1;
 	}
 
 	for(p = servinfo; p != NULL; p = p->ai_next) {
@@ -490,7 +490,7 @@ void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data
 
 	if (p == NULL) {
 		fprintf(stderr, "client: failed to connect\n");
-		return;
+		return -1;
 	}
 
 	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr),
@@ -505,9 +505,9 @@ void send_data_via_socket(char *serverAddress, char *portNo, unsigned char *data
 	printf("slave_fdmax:%d\n",fdmax);
 	if ((numbytes = send(senderfd, data, data_size, 0)) == -1) {
 		perror("send");
-		exit(1);
+		return -1;
 	}
-
+	return 0;
 }
 
 void close_all_server_connections()
@@ -570,12 +570,20 @@ void executeCommand(char *userInput)
 							sprintf(serverPort, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
 							//strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
 							struct connectionInfo *conObj = malloc(sizeof(struct connectionInfo));
-							send_data_via_socket(serverAddress, serverPort, buf, packetsize, &conObj->sockfd);
-							strcpy(conObj->clientAddress, serverAddress);
-							strcpy(conObj->portNo, serverPort);
-							strcpy(conObj->fqdn, serverAddress);
-							insertClientToPeerList(conObj);
-							is_registered = 1;}
+							int status = send_data_via_socket(serverAddress, serverPort, buf, packetsize, &conObj->sockfd);
+							if(status == 0)
+							{
+								strcpy(conObj->clientAddress, serverAddress);
+								strcpy(conObj->portNo, serverPort);
+								strcpy(conObj->fqdn, getfqdnbyip(serverAddress, serverPort));
+								insertClientToPeerList(conObj);
+								is_registered = 1;
+							}
+							else
+							{
+								printf("Error in registration\n");
+							}
+						}
 						else {
 							printf("Already Registered\n");
 						}
@@ -713,36 +721,39 @@ void executeCommand(char *userInput)
 						else
 						{
 							//		printf("filename to send for PUT%s\n", strgetfilename);
-							fp = fopen(strgetfilename,"rb");
-							fseek(fp, 0, SEEK_END);
-							filelen = ftell(fp);
-							rewind(fp);
-							//	printf("filelen:%d\n",filelen);
-							numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
-							//	printf("num packets:%d\n",numpackets);
-							for(i=0;i<numpackets;i++)
+							if(access(strgetfilename, F_OK)!=-1)
 							{
-								memset(filebuffer,0,FILEBUFFSIZE);
-								memset(buf, 0, BUFFSIZE);
-								filebytesread = fread(&filebuffer, 1, FILEBUFFSIZE, fp);
-								packetsize=0;
-								packetsize+= pack(buf+packetsize, "h", PUT_SATNEY);
-								packetsize+= pack(buf+packetsize, "s",strgetfilename);
-								packetsize+= pack(buf+packetsize, "s",filebuffer);
-								packetsize+= pack(buf+packetsize, "h",filebytesread);
-								packetsize+= pack(buf+packetsize, "h",i+1);
-								if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
+								fp = fopen(strgetfilename,"rb");
+								fseek(fp, 0, SEEK_END);
+								filelen = ftell(fp);
+								rewind(fp);
+								//	printf("filelen:%d\n",filelen);
+								numpackets = (filelen + FILEBUFFSIZE - 1) / FILEBUFFSIZE;
+								//	printf("num packets:%d\n",numpackets);
+								for(i=0;i<numpackets;i++)
 								{
-									perror("send");
-									exit(1);
-								}
-								else
-								{
-									printf("PUT: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,foundClient->sockfd);
-								}
+									memset(filebuffer,0,FILEBUFFSIZE);
+									memset(buf, 0, BUFFSIZE);
+									filebytesread = fread(&filebuffer, 1, FILEBUFFSIZE, fp);
+									packetsize=0;
+									packetsize+= pack(buf+packetsize, "h", PUT_SATNEY);
+									packetsize+= pack(buf+packetsize, "s",strgetfilename);
+									packetsize+= pack(buf+packetsize, "s",filebuffer);
+									packetsize+= pack(buf+packetsize, "h",filebytesread);
+									packetsize+= pack(buf+packetsize, "h",i+1);
+									if((numbytes=send(foundClient->sockfd, &buf, packetsize, 0)) == -1)
+									{
+										perror("send");
+										exit(1);
+									}
+									else
+									{
+										printf("PUT: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,foundClient->sockfd);
+									}
 
+								}
+								fclose(fp);
 							}
-							fclose(fp);
 						}
 					}
 					else
@@ -807,7 +818,7 @@ char* getfqdnbyip(char *ipaddr, char *servport)
 		printf("fqdn:%s\n", gai_strerror(res));
 		exit(1);
 	}
-	return &node[0];
+	return node;
 }
 
 int hostname_to_ip(char *hostname , char *ip)

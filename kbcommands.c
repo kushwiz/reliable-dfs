@@ -55,7 +55,14 @@ void doCreator()
 void doList()
 {
   struct connectionInfo *itr;
-  itr = peerliststartPtr;
+  if(isClient == 1)
+  {
+    itr = peerliststartPtr;
+  }
+  else
+  {
+    itr = serverliststartPtr;
+  }
   printf("id:\tHostname\t\t\tIP address\tPort No.\tSfd\n");
   int i = 1;
   while(itr!=NULL)

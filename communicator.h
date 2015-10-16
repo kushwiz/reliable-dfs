@@ -23,7 +23,7 @@ void close_all_server_connections();
 
 extern int isClient;
 
-void send_data_via_socket(char*, char*, unsigned char*, int, int*);
+int send_data_via_socket(char*, char*, unsigned char*, int, int*);
 void process_socket_actions(int, unsigned char*, int);
 void sendfileget(char*, int);
 void syncfileget();
