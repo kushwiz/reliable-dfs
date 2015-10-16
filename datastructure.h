@@ -17,11 +17,12 @@ void insertClientToServerList(struct connectionInfo*);
 void removeClientFromServerList(int);
 struct connectionInfo* getClientFromServerList(int);
 void removeClientFromServerListWithIpPort(char*,char*);
+struct connectionInfo* getClientFromServerListWithIp(char*);
 
 void insertClientToPeerList(struct connectionInfo*);
 void removeClientFromPeerList(int);
 struct connectionInfo* getClientFromPeerList(int);
 void removeClientFromPeerListWithIpPort(char*,char*);
-struct connectionInfo* getClientFromPeerListWithIpPort(char*,char*);
+struct connectionInfo* getClientFromPeerListWithIp(char*);
 struct connectionInfo* getClientFromPeerListWithId(int);
 int getPeerListSize();

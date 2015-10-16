@@ -220,6 +220,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 	char caddress[100], pno[10], cfqdn[100], strgetfilename[100];
 	fd_set read_fds;
 	FILE *fp;
+	struct connectionInfo *foundClient = NULL;
 	switch(cmdl)
 	{
 		case REGISTER:
@@ -311,11 +312,30 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 		case CONNECT:
 			if(isClient)
 			{
-				if(getPeerListSize() < 3)
+				if(getPeerListSize() < MAXPEERLIMIT)
 				{
 					printf("peer is connecting\n");
 					read_fds = master;
 					saddress = getipbyfd(sfd);
+					foundClient = getClientFromPeerListWithIp(saddress);
+					if(foundClient != NULL)
+					{
+						packetsize = 0;
+						memset(buff, 0, BUFFSIZE);
+						packetsize += pack(buff+packetsize, "h", ERR_INVALID);
+						packetsize += pack(buff+packetsize, "s", "You are already in the peer list");
+						if((numbytes = send(sfd, &buff, packetsize, 0)) == -1)
+						{
+							perror("send");
+						}
+						else
+						{
+							printf("ERR_INVALID_CONNECT:bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize, sfd);
+						}
+						FD_CLR(sfd, &master);
+						close(sfd);
+						return;
+					}
 
 					unpack(buf, "h100s", &commandTemp, sport);
 					fqdn = malloc(100*sizeof(char));
@@ -392,7 +412,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			break;
 
 		case PUT_SATNEY:
-			if(isClient == 0)
+			if(isClient)
 			{
 				printf("PUT REQUEST\n");
 				memset(filebuffer, 0, FILEBUFFSIZE);
@@ -626,7 +646,7 @@ void executeCommand(char *userInput)
 				case CONNECT:
 					if(isClient)
 					{
-						if(getPeerListSize() < 3)
+						if(getPeerListSize() < MAXPEERLIMIT)
 						{
 							memset(buf,0,BUFFSIZE);
 							packetsize = 0;
@@ -638,7 +658,13 @@ void executeCommand(char *userInput)
 							//strncpy(serverPort, userInput + rm[2].rm_so, (int)(rm[2].rm_eo - rm[2].rm_so));
 							sprintf(serverAddress,"%.*s", (int)(rm[1].rm_eo - rm[1].rm_so), userInput + rm[1].rm_so);
 							sprintf(serverPort, "%.*s", (int)(rm[2].rm_eo - rm[2].rm_so), userInput + rm[2].rm_so);
-							foundClient = getClientFromPeerListWithIpPort(serverAddress, serverPort);
+							foundClient = getClientFromPeerListWithIp(serverAddress);
+							if(foundClient !=NULL)
+							{
+								printf("Already added as peer\n");
+								return;
+							}
+							foundClient = getClientFromServerListWithIp(serverAddress);
 							if(foundClient == NULL)
 							{
 								printf("Hold on, this client is not registered with the server\n");

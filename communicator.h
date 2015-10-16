@@ -17,6 +17,7 @@
 #define BACKLOG_CONN 10
 #define FILEBUFFSIZE 256
 #define BUFFSIZE FILEBUFFSIZE+100
+#define MAXPEERLIMIT 4
 void server_socket_runner();
 int setup_server_socket(char*);
 void close_all_server_connections();

@@ -126,6 +126,22 @@ void removeClientFromServerListWithIpPort(char *ip, char *portNo)
 	}
 }
 
+struct connectionInfo* getClientFromServerListWithIp(char *ip)
+{
+	struct connectionInfo *itr;
+	itr = serverliststartPtr;
+
+	while(itr!=NULL)
+	{
+		if(strcmp(ip, itr->clientAddress)==0)
+		{
+			return itr;
+		}
+		itr = itr->next;
+	}
+	return NULL;
+}
+
 
 void insertClientToPeerList(struct connectionInfo *newClient)
 {
@@ -219,14 +235,14 @@ struct connectionInfo* getClientFromPeerListWithId(int id)
 	return NULL;
 }
 
-struct connectionInfo* getClientFromPeerListWithIpPort(char *ip, char *portNo)
+struct connectionInfo* getClientFromPeerListWithIp(char *ip)
 {
 	struct connectionInfo *itr;
-	itr = serverliststartPtr;
+	itr = peerliststartPtr;
 
 	while(itr!=NULL)
 	{
-		if(strcmp(ip, itr->clientAddress)==0 && strcmp(portNo,itr->portNo)==0)
+		if(strcmp(ip, itr->clientAddress)==0)
 		{
 			return itr;
 		}
