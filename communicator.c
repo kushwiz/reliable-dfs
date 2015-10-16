@@ -164,7 +164,7 @@ void server_socket_runner()
 					inet_ntop(their_addr.ss_family,
 							get_in_addr((struct sockaddr *)&their_addr),
 							s, sizeof s);
-					printf("server: got connection from %s  sfd:%d\n", s, new_fd);
+					//printf("server: got connection from %s  sfd:%d\n", s, new_fd);
 
 				} else {
 					// handle data from a client
@@ -228,7 +228,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			{
 				read_fds = master;
 				saddress = getipbyfd(sfd);
-				printf("new client registering:%s\n", saddress);
+				//printf("new client registering:%s\n", saddress);
 				struct connectionInfo *itr = serverliststartPtr;
 				while(itr!=NULL) {
 					memset(buff,0,BUFFSIZE);
@@ -244,7 +244,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 					}
 					else
 					{
-						printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+						//printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
 					}
 					itr = itr->next;
 					usleep(1000);
@@ -262,7 +262,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				}
 				else
 				{
-					printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+					//printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
 				}
 				usleep(500);
 				unpack(buf, "h100s", &commandTemp, sport);
@@ -288,7 +288,9 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 						if ((numbytes = send(i, &buff1, packetsize, 0)) == -1) {
 							perror("send");
 						}
-						else {printf("bytes sent: %d  packetsize:%d to:%d\n",numbytes,packetsize,i);}
+						else {
+						//printf("bytes sent: %d  packetsize:%d to:%d\n",numbytes,packetsize,i);
+						}
 					}
 				}
 			}
@@ -304,7 +306,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				}
 				else
 				{
-					printf("bytes sent:%d packetsize:%d to:%d\n", numbytes, packetsize, sfd);
+					//printf("bytes sent:%d packetsize:%d to:%d\n", numbytes, packetsize, sfd);
 				}
 			}
 			break;
@@ -330,7 +332,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 						}
 						else
 						{
-							printf("ERR_INVALID_CONNECT:bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize, sfd);
+							//printf("ERR_INVALID_CONNECT:bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize, sfd);
 						}
 						FD_CLR(sfd, &master);
 						close(sfd);
@@ -360,7 +362,7 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 					}
 					else
 					{
-						printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+						//printf("bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
 					}
 				}
 			}
@@ -375,33 +377,33 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				}
 				else
 				{
-					printf("ERR_INVALID_CONNECT:bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize, sfd);
+					//printf("ERR_INVALID_CONNECT:bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize, sfd);
 				}
 			}
 			break;
 
 		case GET:
-			printf("GET requested\n");
+			//printf("GET requested\n");
 			unpack(buf, "h100s", &commandTemp, strgetfilename);
-			printf("filename to send for GET:%s\n", strgetfilename);
+			//printf("filename to send for GET:%s\n", strgetfilename);
 			sendfileget(strgetfilename, sfd);
 			break;
 
 		case GET_REPLY:
 			memset(filebuffer, 0, FILEBUFFSIZE);
 			dynamicunpacker = malloc(50*sizeof(char));
-			sprintf(dynamicunpacker, "h100s%dsh", FILEBUFFSIZE);
+			sprintf(dynamicunpacker, "h100s%dshh", FILEBUFFSIZE);
 			unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq, &numpackets);
 			free(dynamicunpacker);
 			if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
 			{
-				fp = fopen(strgetfilename, "rb");
+				fp = fopen(strgetfilename, "wb");
 			}
 			else
 			{
 				fp = fopen(strgetfilename, "ab");
 			}
-			printf("size of filebuffer:%lu ts:%d\n",sizeof(filebuffer), (int)time(NULL));
+			//printf("size of filebuffer:%lu ts:%d\n",sizeof(filebuffer), (int)time(NULL));
 			fwrite(filebuffer, 1, filebytesread, fp);
 			if(numpackets == packetseq)
 			{
@@ -414,14 +416,14 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 		case PUT_SATNEY:
 			if(isClient)
 			{
-				printf("PUT REQUEST\n");
+				//printf("PUT REQUEST\n");
 				memset(filebuffer, 0, FILEBUFFSIZE);
 				dynamicunpacker = malloc(50*sizeof(char));
-				sprintf(dynamicunpacker, "h100s%dsh", FILEBUFFSIZE);
+				sprintf(dynamicunpacker, "h100s%dshh", FILEBUFFSIZE);
 				unpack(buf, dynamicunpacker, &commandTemp, strgetfilename, filebuffer, &filebytesread, &packetseq);
 				if(packetseq==1 && (access(strgetfilename,F_OK)!=-1))
 				{
-					fp = fopen(strgetfilename, "rb");
+					fp = fopen(strgetfilename, "wb");
 				}
 				else
 				{
@@ -452,9 +454,9 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 
 		case ADD_TO_SERVER_IP_LIST:
 			is_registered = 1;
-			printf("add to server ip list\n");
+			//printf("add to server ip list\n");
 			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
-			printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
+			//printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
 			struct connectionInfo *newClient1 = malloc(sizeof(struct connectionInfo));
 			strcpy(newClient1->clientAddress, caddress);
 			strcpy(newClient1->portNo, pno);
@@ -465,9 +467,9 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 
 		case ADD_TO_PEER_IP_LIST:
 			is_registered = 1;
-			printf("add to peer ip list\n");
+			//printf("add to peer ip list\n");
 			unpack(buf, "h100s10s100s", &commandTemp, caddress,pno,cfqdn);
-			printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
+			//printf("caddress:%s, pno:%s, cfqdn:%s\n",caddress,pno,cfqdn);
 			struct connectionInfo *newClient2 = malloc(sizeof(struct connectionInfo));
 			strcpy(newClient2->clientAddress, caddress);
 			strcpy(newClient2->portNo, pno);
@@ -477,9 +479,9 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 			break;
 
 		case REMOVE_FROM_SERVER_IP_LIST:
-			printf("remove from server ip list\n");
+			//printf("remove from server ip list\n");
 			unpack(buf, "h100s10s", &commandTemp, caddress,pno);
-			printf("caddress:%s, pno:%s\n",caddress,pno);
+			//printf("caddress:%s, pno:%s\n",caddress,pno);
 			removeClientFromServerListWithIpPort(caddress, pno);
 			removeClientFromPeerListWithIpPort(caddress, pno);
 			break;
@@ -920,7 +922,7 @@ void sendfileget(char *strgetfilename, int sfd)
 		}
 		else
 		{
-			printf("bytes sent:%d packetsize:%d to:%d\n",numbytes, packetsize, sfd);
+			//printf("bytes sent:%d packetsize:%d to:%d\n",numbytes, packetsize, sfd);
 		}
 	}
 	else
@@ -951,7 +953,7 @@ void sendfileget(char *strgetfilename, int sfd)
 			}
 			else
 			{
-				printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
+				//printf("GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,sfd);
 			}
 			usleep(300);
 		}
@@ -988,7 +990,7 @@ void syncfileget()
 				}
 				else
 				{
-					printf("SYNC GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,itr->sockfd);
+					//printf("SYNC GET: bytes sent:%d packetsize:%d to:%d\n",numbytes,packetsize,itr->sockfd);
 				}
 			}
 		}
@@ -1018,7 +1020,7 @@ void syncallpeers()
 			}
 			else
 			{
-				printf("SYNC PEERS: to:%d\n",itr->sockfd);
+				//printf("SYNC PEERS: to:%d\n",itr->sockfd);
 			}
 		}
 		itr = itr->next;
@@ -1048,7 +1050,7 @@ void syncallclients()
 			}
 			else
 			{
-				printf("SYNC PEERS: to:%d\n",itr->sockfd);
+				//printf("SYNC PEERS: to:%d\n",itr->sockfd);
 			}
 		}
 		itr = itr->next;
