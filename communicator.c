@@ -273,7 +273,6 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				strcpy(newClient->portNo, sport);
 				strcpy(newClient->fqdn, fqdn);
 				newClient->next = NULL;
-				printf("fqdn:%s\n",newClient->fqdn);
 				insertClientToServerList(newClient);
 				free(fqdn);
 				packetsize = 0;
@@ -283,7 +282,6 @@ void process_socket_actions(int cmdl, unsigned char *buf, int sfd)
 				packetsize += pack(buff1+packetsize, "s", newClient->fqdn);
 				for(i=0;i<=fdmax;i++){
 					if(i!=listener && i>listener) {
-						printf("sending to %d\n",i);
 						if ((numbytes = send(i, &buff1, packetsize, 0)) == -1) {
 							perror("send");
 						}
